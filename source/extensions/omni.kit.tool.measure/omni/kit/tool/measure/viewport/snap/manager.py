@@ -9,6 +9,7 @@
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
+import carb.settings
 import omni.kit.raycast.query
 from omni.kit.viewport.utility import get_active_viewport_window
 from pxr import Sdf
@@ -29,6 +30,7 @@ from .registry import MeasureSnapProviderRegistry
 
 class MeasureSnapProviderManager:
     def __singleton_init__(self):
+        self._settings = carb.settings.get_settings()
         self._enabled: bool = False
         self._window = get_active_viewport_window()
         self._api = self._window.viewport_api if self._window else None
@@ -149,11 +151,21 @@ class MeasureSnapProviderManager:
         pass
         # self._update_enabled_providers()
 
+    def _geometry_snap_enabled(self) -> bool:
+        return bool(self._settings.get("/rtx-transient/scenedb/useUniformsReindexing"))
+
     def _update_enabled_providers(self, snap_modes: List[SnapMode]) -> None:
         if not self.enabled:
             self._enabled_providers = []
             return
 
         mode_names = [snap.name.title() for snap in snap_modes]
-        self._enabled_providers = [p for p in self._providers.values() if p and p.get_display_name() in mode_names]
+        enable_geometry_snap = self._geometry_snap_enabled()
+        self._enabled_providers = []
+        for provider in self._providers.values():
+            if not provider or provider.get_display_name() not in mode_names:
+                continue
+            if not enable_geometry_snap and isinstance(provider, (VertexSnapProvider, EdgeSnapProvider, MidPointSnapProvider)):
+                continue
+            self._enabled_providers.append(provider)
         self._enabled_providers.sort(key=lambda provider: provider.get_order())

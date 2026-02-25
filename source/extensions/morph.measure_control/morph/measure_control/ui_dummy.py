@@ -3,7 +3,7 @@ import carb
 
 
 class DummyMeasureControlUI:
-    _TARGET_PRIM_PATH = "/World/Cube"
+    _TARGET_PRIM_PATH = "/World/CL6_Line_Full/N_02_PCB_Router/_2_PCB_Router_Machine"
 
     def __init__(self, service):
         self._service = service

@@ -16,6 +16,7 @@
 
 from typing import Any, Dict, List, Optional, Sequence
 
+import carb
 import omni.kit.raycast.query
 import omni.usd as ou
 from omni import ui
@@ -43,7 +44,11 @@ from .viewport_mode_model import ViewportModeModel
 # UI 버튼 클릭 시 호출되는 모듈 수준 함수 (선택된 메시에 대해 BBox X/Y/Z 측정 생성)
 # -----------------------------------------------------------------------------
 
-def _collect_mesh_prims(prim: Usd.Prim, root_path: Optional[Sdf.Path] = None) -> List[Usd.Prim]:
+def _collect_mesh_prims(
+    prim: Usd.Prim,
+    root_path: Optional[Sdf.Path] = None,
+    include_referenced_children: bool = True,
+) -> List[Usd.Prim]:
     """
     프림과 그 하위의 모든 Mesh 프림을 수집합니다 (통합 바운딩용). Camera 프림은 제외합니다.
 
@@ -67,11 +72,12 @@ def _collect_mesh_prims(prim: Usd.Prim, root_path: Optional[Sdf.Path] = None) ->
             continue
         # 루트 바로 아래에 있는 별도 usd 에셋(Reference/Payload) 루트는 상위 에셋 BBox에서 제외
         if (
-            child.GetPath() != root_path
+            not include_referenced_children
+            and child.GetPath() != root_path
             and (child.HasAuthoredReferences() or child.HasAuthoredPayloads())
         ):
             continue
-        result.extend(_collect_mesh_prims(child, root_path))
+        result.extend(_collect_mesh_prims(child, root_path, include_referenced_children))
     return result
 
 
@@ -91,9 +97,12 @@ def _compute_combined_bbox(
     min_p: Optional[Gf.Vec3d] = None
     max_p: Optional[Gf.Vec3d] = None
     for p in mesh_prims:
-        local_bbox = bbox_cache.ComputeLocalBound(p)
-        r = local_bbox.GetRange()
-        mn, mx = r.GetMin(), r.GetMax()
+        try:
+            local_bbox = bbox_cache.ComputeLocalBound(p)
+            r = local_bbox.GetRange()
+            mn, mx = r.GetMin(), r.GetMax()
+        except Exception:
+            continue
         corners = (
             Gf.Vec3d(mn[0], mn[1], mn[2]),
             Gf.Vec3d(mx[0], mn[1], mn[2]),
@@ -122,6 +131,17 @@ def _compute_combined_bbox(
                     max(max_p[2], w[2]),
                 )
     return (min_p, max_p) if min_p is not None else None
+
+
+def _compute_prim_world_bbox(bbox_cache: UsdGeom.BBoxCache, prim: Usd.Prim) -> Optional[tuple]:
+    try:
+        world_bound = bbox_cache.ComputeWorldBound(prim)
+        r = world_bound.GetRange()
+        if r.IsEmpty():
+            return None
+        return (Gf.Vec3d(r.GetMin()), Gf.Vec3d(r.GetMax()))
+    except Exception:
+        return None
 
 
 def _create_point_to_point_measurement_impl(
@@ -265,8 +285,8 @@ def _create_bbox_axis_measurements_impl(root_prim: Usd.Prim, max_depth: int = 0)
     prim_path = str(root_prim.GetPath())
     try:
         # 선택 prim이 Mesh인 경우: 부모 Xform을 보지 않고 해당 Mesh만 BBox 측정 (단일 큐브 등 동일 동작)
+        bbox_cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
         if root_prim.IsA(UsdGeom.Mesh):
-            bbox_cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
             combined = _compute_combined_bbox(bbox_cache, [root_prim])
             if not combined:
                 return
@@ -284,10 +304,9 @@ def _create_bbox_axis_measurements_impl(root_prim: Usd.Prim, max_depth: int = 0)
             return
 
         mesh_prims = _collect_mesh_prims(root_prim, root_prim.GetPath())
-        if not mesh_prims:
-            return
-        bbox_cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
-        combined = _compute_combined_bbox(bbox_cache, mesh_prims)
+        combined = _compute_combined_bbox(bbox_cache, mesh_prims) if mesh_prims else None
+        if not combined:
+            combined = _compute_prim_world_bbox(bbox_cache, root_prim)
         if not combined:
             return
         mn, mx = combined[0], combined[1]
@@ -363,8 +382,8 @@ def _create_bbox_axis_measurements_impl(root_prim: Usd.Prim, max_depth: int = 0)
             _create_bbox_measurement_single_prim(child_path, smn, smx, dim_level)
 
         # TODO: 흰색 AABB 와이어프레임 박스 - 추후 구현 예정 (BBoxWireframeOverlayItem)
-    except Exception:
-        pass
+    except Exception as exc:
+        carb.log_error(f"[omni.kit.tool.measure] mesh bbox measurement failed for {prim_path}: {exc}")
 
 
 def run_mesh_bbox_measurement_for_selection() -> None:
