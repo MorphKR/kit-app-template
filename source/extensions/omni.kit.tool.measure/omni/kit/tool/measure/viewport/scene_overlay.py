@@ -21,11 +21,13 @@ from ..manager import StateMachine
 
 
 class MeasureSceneOverlay:
+    """MeasureSceneOverlay 클래스 설명입니다."""
     FINALIZE_MODES = [MeasureMode.MULTI_POINT, MeasureMode.AREA]
     NAVBAR_VISIBILITY_PATH: str = "/exts/omni.kit.viewport.navigation.core/isVisible"
     TIMELINE_MINIBAR_PATH: str = "/exts/omni.kit.timeline.minibar/visible"
 
     def __init__(self, on_enter_pressed_fn: Optional[Callable] = None):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
         self.__frame = ui.Frame()
 
@@ -49,9 +51,11 @@ class MeasureSceneOverlay:
         self.__frame.set_build_fn(self.__build_ui())
 
     def __del__(self):
+        """__del__ 동작을 수행합니다."""
         self.destroy()
 
     def destroy(self):
+        """destroy 동작을 수행합니다."""
         if self._nav_visibility_sub:
             self._settings.unsubscribe_to_change_events(self._nav_visibility_sub)
             self._nav_visibility_sub = None
@@ -61,12 +65,15 @@ class MeasureSceneOverlay:
             self._timeline_visibility_sub = None
 
     def __enter__(self):
+        """__enter__ 동작을 수행합니다."""
         return self.__root
 
     def __exit__(self):
+        """__exit__ 동작을 수행합니다."""
         return True
 
     def __build_ui(self):
+        """__build_ui 동작을 수행합니다."""
         self.__root = ui.ZStack()
         with self.__root:
             self._button_stack = ui.VStack(visible=self._visibility)
@@ -88,11 +95,13 @@ class MeasureSceneOverlay:
         self.__update_button_position()
 
     def __block_snapping(self, block: bool) -> None:
+        """__block_snapping 동작을 수행합니다."""
         from .snap.manager import MeasureSnapProviderManager
 
         MeasureSnapProviderManager().enabled = not block
 
     def _on_complete_clicked(self) -> None:
+        """_on_complete_clicked 동작을 수행합니다."""
         if self._button_stack:
             self._visibility = False
             self._button_stack.visible = self._visibility
@@ -107,11 +116,13 @@ class MeasureSceneOverlay:
             self.__block_snapping(False)
 
     def __on_hovered(self, hovered: bool) -> None:
+        """__on_hovered 동작을 수행합니다."""
         shape = CursorStandardShape.HAND if hovered else CursorStandardShape.ARROW
         get_main_window_cursor().override_cursor_shape(shape)
         self.__block_snapping(hovered)
 
     def __on_creation_state_changed(self, state: MeasureCreationState) -> None:
+        """__on_creation_state_changed 동작을 수행합니다."""
         if self._button_stack:
             self._visibility = (
                 state == MeasureCreationState.END_SELECTION and StateMachine().tool_mode in self.FINALIZE_MODES
@@ -119,9 +130,11 @@ class MeasureSceneOverlay:
             self._button_stack.visible = self._visibility
 
     def __on_visibility_changed(self, *_) -> None:
+        """__on_visibility_changed 동작을 수행합니다."""
         self.__update_button_position()
 
     def __update_button_position(self):
+        """__update_button_position 동작을 수행합니다."""
         if not self._top_offset and not self._bottom_offset:
             return
 
@@ -138,6 +151,7 @@ class MeasureSceneOverlay:
         self.__frame.rebuild()
 
     def _on_key_pressed(self, key: KeyboardInput) -> None:
+        """_on_key_pressed 동작을 수행합니다."""
         if key != KeyboardInput.ENTER:
             return
 

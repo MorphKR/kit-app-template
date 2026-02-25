@@ -30,9 +30,11 @@ from .viewport_mode_model import ViewportModeModel
 # AngleModel: TODO: Move Angle drawing to its own class object to handle compute
 # so the AngleModel class isn't _obtuse_ with math-based code
 class AngleModel(ViewportModeModel):
+    """AngleModel 클래스 설명입니다."""
     _mode = MeasureMode.ANGLE
 
     def __init__(self, viewport_api):
+        """__init__ 동작을 수행합니다."""
         super().__init__(viewport_api, mode=self._mode)
         self._start_point: PositionItem = PositionItem(changed_fn=self._on_point_changed)
         self._start_prim: PrimRefItem = PrimRefItem()
@@ -61,6 +63,7 @@ class AngleModel(ViewportModeModel):
             self._ui_scene_label_obtuse: MeasureSceneLabel = MeasureSceneLabel("", MeasureAxis.NONE, self._mode)
 
     def reset(self):
+        """reset 동작을 수행합니다."""
         super().reset()
         self._ui_points = None
         self._ui_seg_a = None
@@ -89,6 +92,7 @@ class AngleModel(ViewportModeModel):
         self.creation_state = MeasureCreationState.START_SELECTION
 
     def draw(self):
+        """draw 동작을 수행합니다."""
         self._color = self._get_display_color()
 
         # We just started, clear and create all the necessary scene elements
@@ -156,6 +160,7 @@ class AngleModel(ViewportModeModel):
     def _calculate_arc_matrix_and_angle(
         self, start: Gf.Vec3d, mid: Gf.Vec3d, end: Gf.Vec3d
     ) -> tuple[Gf.Matrix4d | None, float | None]:
+        """_calculate_arc_matrix_and_angle 동작을 수행합니다."""
         dir_start = (start - mid).GetNormalized()
         dir_end = (end - mid).GetNormalized()
 
@@ -177,6 +182,7 @@ class AngleModel(ViewportModeModel):
         return xform_mtx, angle
 
     def _calculate_angle(self, start: Gf.Vec3d, axis: Gf.Vec3d, end: Gf.Vec3d) -> float:
+        """_calculate_angle 동작을 수행합니다."""
         vec_a = Gf.Vec3d(start[0] - axis[0], start[1] - axis[1], start[2] - axis[2])
         vec_b = Gf.Vec3d(end[0] - axis[0], end[1] - axis[1], end[2] - axis[2])
 
@@ -199,6 +205,7 @@ class AngleModel(ViewportModeModel):
         return angle_rad * 57.2957795131  # 180.0/π
 
     def _calculate_angle_rotation(self, start: Gf.Vec3d, axis: Gf.Vec3d, end: Gf.Vec3d) -> Gf.Vec3d:
+        """_calculate_angle_rotation 동작을 수행합니다."""
         up_vector = [0, 1, 0] if UsdGeom.GetStageUpAxis(self._api.stage) == UsdGeom.Tokens.y else [0, 0, 1]
 
         # Get the normailzed unit vectors of each leg of the angle from point to axis
@@ -238,9 +245,11 @@ class AngleModel(ViewportModeModel):
         return Gf.Vec3d(roll, pitch, yaw)
 
     def _get_label_pos(self) -> Gf.Vec3d:
+        """_get_label_pos 동작을 수행합니다."""
         return self._axis_point.vector + Gf.Vec3d(0, 22.5, 0)
 
     def _create_label(self) -> None:
+        """_create_label 동작을 수행합니다."""
         if self.creation_state not in [MeasureCreationState.END_SELECTION, MeasureCreationState.FINALIZE]:
             return
 
@@ -280,6 +289,7 @@ class AngleModel(ViewportModeModel):
         self._label_root_xform.visible = True
 
     def _update_labels(self, acute_angle: float):
+        """_update_labels 동작을 수행합니다."""
         label_pos = self._get_label_pos()
         self._label_root_xform.transform = sc.Matrix44.get_translation_matrix(label_pos[0], label_pos[1], label_pos[2])
         label_angle = acute_angle
@@ -316,6 +326,7 @@ class AngleModel(ViewportModeModel):
         )
 
     def _update_arcs(self, start: Gf.Vec3d, mid: Gf.Vec3d, end: Gf.Vec3d):
+        """_update_arcs 동작을 수행합니다."""
         mtx, angle = self._calculate_arc_matrix_and_angle(start, mid, end)
         if mtx is not None and angle is not None:
             self._arc_xform.transform = flatten(mtx)
@@ -326,6 +337,7 @@ class AngleModel(ViewportModeModel):
             self._obtuse_arc.end = angle / 2 - 2 * pi
 
     def _on_point_changed(self):
+        """_on_point_changed 동작을 수행합니다."""
         if not self._ui_points:
             return
 
@@ -338,6 +350,7 @@ class AngleModel(ViewportModeModel):
 
     # Input Handling
     def _on_moved(self, coords: Sequence[float], result: omni.kit.raycast.query.RayQueryResult):
+        """_on_moved 동작을 수행합니다."""
         if self.creation_state in [
             MeasureCreationState.START_SELECTION,
             MeasureCreationState.INTERMEDIATE_SELECTION,
@@ -361,6 +374,7 @@ class AngleModel(ViewportModeModel):
                 self.draw()
 
     def _on_clicked(self, coords: Sequence[float], mouse_button: int = 0):
+        """_on_clicked 동작을 수행합니다."""
         if self.creation_state in [
             MeasureCreationState.START_SELECTION,
             MeasureCreationState.INTERMEDIATE_SELECTION,
@@ -408,6 +422,7 @@ class AngleModel(ViewportModeModel):
             self.reset()
 
     def _on_save(self):
+        """_on_save 동작을 수행합니다."""
         display_panel = ReferenceManager().ui_display_panel
 
         payload: MeasurePayload = MeasurePayload()

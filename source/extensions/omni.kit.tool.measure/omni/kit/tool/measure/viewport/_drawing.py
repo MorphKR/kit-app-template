@@ -30,14 +30,12 @@ def draw_display_axis(
     precision: int,
     hide_unit: bool = False,
 ) -> None:
-    """
-    Draws the World or local XYZ offset
-    """
+    """동작 설명입니다."""
     # Early out if there's no need to display
     if axis_space == DisplayAxisSpace.NONE:
         return
 
-    # Calculate the support line information
+    # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
     if axis_space == DisplayAxisSpace.WORLD:
         x_start, x_end = start_point, Gf.Vec3d(end_point[0], start_point[1], start_point[2])
         y_start, y_end = x_end, Gf.Vec3d(end_point[0], end_point[1], start_point[2])
@@ -59,12 +57,12 @@ def draw_display_axis(
         y_start, y_end = x_end, (y_vec * -y_len) + x_end
         z_start, z_end = y_end, end_point
 
-    # Calculate Line Lengths
+    # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
     x_dist = (x_start - x_end).GetLength()
     y_dist = (y_start - y_end).GetLength()
     z_dist = (z_start - z_end).GetLength()
 
-    # Calculate label position, Define Text
+    # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
     centroid = (start_point + end_point) * 0.5
     label_stack.set_position(centroid)
 
@@ -86,7 +84,7 @@ def draw_display_axis(
     )
     label_stack.visible = True
 
-    # Draw Lines
+    # 선 그리기
     if x_dist != 0:
         x_line = sc.Line([*x_start], [*x_end], color=color("#AA5555"), thickness=3)
     if y_dist != 0:

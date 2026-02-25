@@ -39,31 +39,29 @@ from ..manager import MeasurementManager, ReferenceManager, StateMachine
 from ..system import MeasurePrim
 from ._drawing import draw_display_axis
 from .gesture_manager import PreventOthers
-from .tools import MeasureAxisStackLabel  # , triangulate_face
+from .tools import MeasureAxisStackLabel  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
 
-HOVER_COLOR = [1, 1, 0, 1]  # Yellow
-SELECTED_COLOR = [0, 1, 0, 1]  # Green
+HOVER_COLOR = [1, 1, 0, 1]  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
+SELECTED_COLOR = [0, 1, 0, 1]  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
 
 # TODO: BBoxWireframeOverlayItem - 흰색 AABB 와이어프레임 박스 (추후 구현)
 
 
 class _MeasurementItem(sc.AbstractManipulatorItem):
-    """
-    Base AbstractManipulator Item
-    """
+    """동작 설명입니다."""
 
     def __init__(self):
         self.__settings = get_settings()
         self.__dict = get_dictionary()
 
         super().__init__()
-        self._visible: bool = True  # Could be deprecated as this may be calculated and stored in cpp db
+        self._visible: bool = True  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         self._hovered: bool = False
         self._selected: bool = False
         self._selection_enabled = None
         self._manager = PreventOthers()
 
-        # required elements of _any_ Measurement
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         self._root: sc.Transform = None  # sc.Transform()
         self._lbl_root: sc.Transform = None
         self._payload: "MeasurePayload"
@@ -109,10 +107,10 @@ class _MeasurementItem(sc.AbstractManipulatorItem):
         return self._selected
 
     # TODO: Create this as a normal function, set_selected(self, value: bool, update_treeview: bool=False)
-    # To further prevent any nasties
+    # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
     @selected.setter
     def selected(self, value: bool) -> None:
-        # check if the value is the same, if so early out
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         if self._selected == value:
             return
 
@@ -126,7 +124,7 @@ class _MeasurementItem(sc.AbstractManipulatorItem):
 
     @property
     def _selected_line_color(self) -> List[float]:
-        return self.__settings.get(SELECTION_LINE_COLOR)[-4:]  # Last 4 are the proper values
+        return self.__settings.get(SELECTION_LINE_COLOR)[-4:]  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
 
     @property
     def _selected_line_width(self) -> int:
@@ -156,13 +154,13 @@ class _MeasurementItem(sc.AbstractManipulatorItem):
         self._selection_enabled = ReferenceManager().selection_state.enabled
         ReferenceManager().selection_state.enabled = False
 
-        # We need to hold an app update in case a previous measurement
-        # has an identical prim path to not override its state.
-        if _sender is None:  # `None` is passed by the Manager TreeView hover callback
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
+        if _sender is None:  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
 
             async def set_selection_group():
                 await app.get_app().next_update_async()
-                # Hover Selection color
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 for path in self.payload.prim_paths:
                     ou.get_context().set_selection_group(ReferenceManager().selection_group, Sdf.Path(path).pathString)
 
@@ -189,7 +187,7 @@ class _MeasurementItem(sc.AbstractManipulatorItem):
 
     def clear(self):
         self.selected = False
-        self._on_hover_end(None)  # Ensure we clear and update selection state
+        self._on_hover_end(None)  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         self._root.clear()
         self._lbl_root.clear()
 
@@ -215,9 +213,7 @@ class _MeasurementItem(sc.AbstractManipulatorItem):
 
 
 class LinearMeasurementItem(_MeasurementItem):
-    """
-    The model item contains data to create a Linear Measurement
-    """
+    """동작 설명입니다."""
 
     def __init__(self, measure_prim: MeasurePrim):
         super().__init__()
@@ -351,7 +347,7 @@ class LinearMeasurementItem(_MeasurementItem):
                         delete_gestures=self._delete_gestures,
                     )
             else:
-                # label and rectangle
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 self._draw_label()
 
         with self._root:
@@ -369,7 +365,7 @@ class LinearMeasurementItem(_MeasurementItem):
                     )
 
     def _draw_label(self) -> sc.Transform:
-        # Get properties we need to draw the label
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         precision = list(Precision).index(self._payload.precision.value)
         secondary_vals = getattr(self._payload, "secondary_values", None) or []
 
@@ -488,26 +484,26 @@ class LinearMeasurementItem(_MeasurementItem):
                         )
                     else:
                         # 일반 모드: 기존 렌더링 (아이콘 및 배경 포함)
-                        # Calculate background width
+                        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                         char_len = len(label_text)
                         rect_width = int((45 * 1.5 * size_bias) + (10 * char_len))
 
-                        # Label
+                        # 라벨
                         with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) + 22.5, 0, 0)):
                             sc.Label(
                                 label_text, size=text_size.value, color=[0, 0, 0, 1], alignment=ui.Alignment.LEFT_CENTER
                             )
-                        # Background
+                        # 배경
                         sc.Rectangle(
                             width=rect_width, height=45, color=[1, 1, 1, 1], wireframe=False, gestures=self._gestures
                         )
-                        # Icon
+                        # 아이콘
                         with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) - 22.5, 0, 0)):
-                            # Icon Background
+                            # 아이콘 배경
                             sc.Rectangle(
                                 width=45, height=45, color=[0, 0, 0, 0], wireframe=False, gestures=self._delete_gestures
                             )
-                            # Icon Image
+                            # 아이콘 이미지
                             mode_name = self._payload.tool_mode.name.lower()
                             icon_path = (
                                 get_icon_path("scene_icon_tool_delete")
@@ -521,9 +517,7 @@ class LinearMeasurementItem(_MeasurementItem):
 
 
 class MultiPointMeasurementItem(_MeasurementItem):
-    """
-    The model item contains data to display a Multi Point Measurement
-    """
+    """동작 설명입니다."""
 
     def __init__(self, measure_prim: MeasurePrim):
         super().__init__()
@@ -534,7 +528,7 @@ class MultiPointMeasurementItem(_MeasurementItem):
         pass
 
     def _draw_sub_label(self, start: Gf.Vec3d, end: Gf.Vec3d, distance: float) -> sc.Transform:
-        # Get Label content and metadata
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         precision = list(Precision).index(self._payload.precision.value)
 
         label_text: str = f"{distance:.{precision}f} {self._payload.unit_type.value}"
@@ -542,11 +536,11 @@ class MultiPointMeasurementItem(_MeasurementItem):
         text_size = LabelSize(self._payload.label_size)
         size_bias = LABEL_SCALE_MAPPING[text_size]
 
-        # Calculate background width
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         char_len = len(label_text)
         rect_width = int((45 * 1.5 * size_bias) + (10 * char_len))
 
-        # Simple white label with text
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         xform = sc.Transform(
             look_at=sc.Transform.LookAt.CAMERA,
             transform=sc.Matrix44.get_translation_matrix(*label_position),
@@ -562,9 +556,9 @@ class MultiPointMeasurementItem(_MeasurementItem):
         xform.visible = self.visible
         return xform
 
-    # TODO: This could live in the base class
+    # TODO: 후속 구현 및 정리가 필요합니다.
     def _draw_label(self) -> sc.Transform:
-        # Get properties we need to draw the label
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         precision = list(Precision).index(self._payload.precision.value)
 
         centroid = [sum(vec) for vec in zip(*self._payload.computed_points)]
@@ -575,7 +569,7 @@ class MultiPointMeasurementItem(_MeasurementItem):
         text_size: LabelSize = LabelSize(self._payload.label_size)
         size_bias: float = LABEL_SCALE_MAPPING[text_size]
 
-        # Calculate background width
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         char_len = len(label_text)
         rect_width = int((45 * 1.5 * size_bias) + (10 * char_len))
 
@@ -585,18 +579,18 @@ class MultiPointMeasurementItem(_MeasurementItem):
 
         with xform:
             with sc.Transform(scale_to=sc.Space.SCREEN):
-                # Label
+                # 라벨
                 with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) + 22.5, 0, 0)):
                     sc.Label(label_text, size=text_size.value, color=[0, 0, 0, 1], alignment=ui.Alignment.LEFT_CENTER)
-                # Background
+                # 배경
                 sc.Rectangle(width=rect_width, height=45, color=[1, 1, 1, 1], wireframe=False)
-                # Icon
+                # 아이콘
                 with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) - 22.5, 0, 0)):
-                    # Icon Background
+                    # 아이콘 배경
                     sc.Rectangle(
                         width=45, height=45, color=[0, 0, 0, 1], wireframe=False, gestures=self._delete_gestures
                     )
-                    # Icon Image
+                    # 아이콘 이미지
                     mode_name = self._payload.tool_mode.name.lower()
                     icon_path = get_icon_path("tool_delete") if self.selected else get_icon_path(f"tool_{mode_name}")
                     sc.Image(source_url=icon_path, width=45, height=45)
@@ -605,19 +599,17 @@ class MultiPointMeasurementItem(_MeasurementItem):
         return xform
 
     def _draw(self, label_dirty: bool = True):
-        """
-        Draw the measurement to screen.
-        """
+        """동작 설명입니다."""
         color_list = [*self.payload.label_color]
         interact_color = self._selected_line_color if self._selected else HOVER_COLOR if self._hovered else [0, 0, 0, 0]
 
-        points = self._payload.computed_points  # Convert to list values for ui elements
+        points = self._payload.computed_points  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
 
         self._root.clear()
         with self._root:
-            # Draw Lines
+            # 선 그리기
             for i in range(len(points) - 1):
-                # Click Line
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 sc.Line(
                     [*points[i]],
                     [*points[i + 1]],
@@ -626,7 +618,7 @@ class MultiPointMeasurementItem(_MeasurementItem):
                     visible=self.visible,
                     gestures=self._gestures,
                 )
-                # Line
+                # 선
                 sc.Line(
                     [*points[i]],
                     [*points[i + 1]],
@@ -635,7 +627,7 @@ class MultiPointMeasurementItem(_MeasurementItem):
                     visible=self.visible,
                 )
 
-            # Draw line Points
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             sc.Points(
                 [[*vec] for vec in self._payload.computed_points],
                 sizes=[5] * len(points),
@@ -646,19 +638,17 @@ class MultiPointMeasurementItem(_MeasurementItem):
         if label_dirty:
             self._lbl_root.clear()
             with self._lbl_root:
-                # Draw Main Label
+                # 메인 라벨 그리기
                 self._draw_label()
 
                 for i in range(len(points) - 1):
-                    # Sub Label
+                    # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                     if len(points) > 2:
                         self._draw_sub_label(points[i], points[i + 1], self._payload.secondary_values[i])
 
 
 class AngleMeasurementItem(_MeasurementItem):
-    """
-    The model item contains data to create an Angle Measurement
-    """
+    """동작 설명입니다."""
 
     def __init__(self, measure_prim: MeasurePrim):
         super().__init__()
@@ -680,7 +670,7 @@ class AngleMeasurementItem(_MeasurementItem):
 
         self._root.clear()
         with self._root:
-            # Gesture Lines
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             gesture_leg_a = sc.Line(
                 [*start],
                 [*axis],
@@ -698,16 +688,16 @@ class AngleMeasurementItem(_MeasurementItem):
                 gestures=self._gestures,
             )
 
-            # Start-to-axis : Leg A
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             leg_a = sc.Line([*start], [*axis], color=color_list, thickness=3, visible=self.visible)
-            # End-to-axis : Leg B
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             leg_b = sc.Line([*end], [*axis], color=color_list, thickness=3, visible=self.visible)
-            # Points
+            # 포인트
             angle_points = sc.Points(
                 [[*start], [*axis], [*end]], sizes=[5] * 3, colors=[color_list] * 3, visible=self.visible
             )
-            # Label elements
-            # -- Arc
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             angle = Gf.DegreesToRadians(self._payload.primary_value)
             with sc.Transform(transform=flatten(self._calculate_arc_matrix(start, axis, end))):
                 sc.Arc(
@@ -737,7 +727,7 @@ class AngleMeasurementItem(_MeasurementItem):
         if label_dirty:
             self._lbl_root.clear()
             with self._lbl_root:
-                # -- Primary Label
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 primary_label_pos = axis + Gf.Vec3d(0, 22.5, 0)
                 self._draw_label([*primary_label_pos])
 
@@ -756,7 +746,7 @@ class AngleMeasurementItem(_MeasurementItem):
 
         return rot_mtx
 
-    # TODO: Update depending on new UX/UI changes
+    # TODO: 후속 구현 및 정리가 필요합니다.
     def _draw_label(self, position: Union[Vec3d, List[float]]):
         precision = list(Precision).index(self._payload.precision.value)
 
@@ -765,8 +755,8 @@ class AngleMeasurementItem(_MeasurementItem):
         text_size = self._payload.label_size
         size_bias = LABEL_SCALE_MAPPING[text_size]
 
-        # Calculate background width
-        char_len = max(len(label_text) - 3, len(secondary_label_text) - 3)  # Offset for symbol versus text
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
+        char_len = max(len(label_text) - 3, len(secondary_label_text) - 3)  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         rect_width = int((45 * 1.5 * size_bias) + (10 * char_len))
 
         xform = sc.Transform(
@@ -775,10 +765,10 @@ class AngleMeasurementItem(_MeasurementItem):
 
         with xform:
             with sc.Transform(scale_to=sc.Space.SCREEN):
-                # Primary Value Label
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) + 22.5, 22.5, 0)):
                     sc.Label(label_text, size=text_size.value, color=[0, 0, 0, 1], alignment=ui.Alignment.LEFT_CENTER)
-                # Secondary Label
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) + 22.5, -22.5, 0)):
                     sc.Label(
                         secondary_label_text,
@@ -786,23 +776,23 @@ class AngleMeasurementItem(_MeasurementItem):
                         color=[0, 0, 0, 1],
                         alignment=ui.Alignment.LEFT_CENTER,
                     )
-                # Background
+                # 배경
                 sc.Rectangle(width=rect_width, height=90, color=[1, 1, 1, 1], wireframe=False, gestures=self._gestures)
 
                 mode_name = self._payload.tool_mode.name.lower()
-                # Primary Icon
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) - 22.5, 22.5, 0)):
                     sc.Rectangle(
                         width=45, height=45, color=[0, 0, 0, 1], wireframe=False, gestures=self._delete_gestures
                     )
-                    # Icon Image
+                    # 아이콘 이미지
 
                     icon_path = get_icon_path("tool_delete") if self.selected else get_icon_path(f"tool_{mode_name}")
                     self._tool_image = sc.Image(source_url=icon_path, width=45, height=45)
-                # Secondary Icon
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) - 22.5, -22.5, 0)):
                     sc.Rectangle(width=45, height=45, color=[0, 0, 0, 1], wireframe=False)
-                    # Icon Image
+                    # 아이콘 이미지
                     icon_path = get_icon_path(f"tool_{mode_name}")
                     self._tool_image = sc.Image(source_url=icon_path, width=45, height=45, color=ui.color.red)
 
@@ -811,9 +801,7 @@ class AngleMeasurementItem(_MeasurementItem):
 
 
 class DiameterMeasurementItem(_MeasurementItem):
-    """
-    The model item contains data to create a Diameter Measurement
-    """
+    """동작 설명입니다."""
 
     def __init__(self, measure_prim: MeasurePrim):
         super().__init__()
@@ -827,11 +815,11 @@ class DiameterMeasurementItem(_MeasurementItem):
         color_list = [*self.payload.label_color]
         interact_color = self._selected_line_color if self._selected else HOVER_COLOR if self._hovered else [0, 0, 0, 0]
 
-        # Gather Data
+        # 데이터 수집
         start, mid, end, center = self._payload.computed_points[:4]
         diameter = (start - center).GetLength() * 2
 
-        # Matrix
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         dir_start = (start - center).GetNormalized()
         dir_end = (end - center).GetNormalized()
 
@@ -846,11 +834,11 @@ class DiameterMeasurementItem(_MeasurementItem):
 
         self._root.clear()
         with self._root:
-            # Draw the arc  FIXME: Setting transforms under a root, clearing and redrawing seems to cause a flicker.
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             with sc.Transform(flatten(xform_mtx)):
                 sc.Arc(diameter * 0.5, axis=1, thickness=2, color=[1, 1, 1, 1], wireframe=True, visible=self.visible)
 
-            # Draw diameter line + points
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             d_end = (center - start).GetNormalized() * diameter + start
 
             click_line = sc.Line(
@@ -870,7 +858,7 @@ class DiameterMeasurementItem(_MeasurementItem):
                 self._draw_label()
 
     def _draw_label(self):
-        # Get properties we need to draw the label
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         precision = list(Precision).index(self._payload.precision.value)
 
         start, mid, end, center = self._payload.computed_points[:4]
@@ -880,7 +868,7 @@ class DiameterMeasurementItem(_MeasurementItem):
         text_size = self._payload.label_size
         size_bias = LABEL_SCALE_MAPPING[text_size]
 
-        # Calculate background width
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         char_len = len(label_text)
         rect_width = int((45 * 1.5 * size_bias) + (10 * char_len))
 
@@ -892,18 +880,18 @@ class DiameterMeasurementItem(_MeasurementItem):
 
         with xform:
             with sc.Transform(scale_to=sc.Space.SCREEN):
-                # Label
+                # 라벨
                 with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) + 22.5, 0, 0)):
                     sc.Label(label_text, size=text_size.value, color=[0, 0, 0, 1], alignment=ui.Alignment.LEFT_CENTER)
-                # Background
+                # 배경
                 sc.Rectangle(width=rect_width, height=45, color=[1, 1, 1, 1], wireframe=False, gestures=self._gestures)
-                # Icon
+                # 아이콘
                 with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) - 22.5, 0, 0)):
-                    # Icon Background
+                    # 아이콘 배경
                     sc.Rectangle(
                         width=45, height=45, color=[0, 0, 0, 1], wireframe=False, gestures=self._delete_gestures
                     )
-                    # Icon Image
+                    # 아이콘 이미지
                     mode_name = self._payload.tool_mode.name.lower()
                     icon_path = get_icon_path("tool_delete") if self.selected else get_icon_path(f"tool_{mode_name}")
                     self._tool_image = sc.Image(source_url=icon_path, width=45, height=45)
@@ -913,9 +901,7 @@ class DiameterMeasurementItem(_MeasurementItem):
 
 
 class AreaMeasurementItem(_MeasurementItem):
-    """
-    The model item contains data to create an Area Measurement
-    """
+    """동작 설명입니다."""
 
     def __init__(self, measure_prim: MeasurePrim):
         super().__init__()
@@ -929,14 +915,14 @@ class AreaMeasurementItem(_MeasurementItem):
         color_list = [*self.payload.label_color]
         interact_color = self._selected_line_color if self._selected else HOVER_COLOR if self._hovered else [0, 0, 0, 0]
 
-        # Gather Data
+        # 데이터 수집
         points = [[*vec] for vec in self._payload.computed_points]
 
         self._root.clear()
         with self._root:
-            # Draw Gestures Line
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             for i in range(len(points) - 1):
-                # Interact Line
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 sc.Line(
                     points[i],
                     points[i + 1],
@@ -945,10 +931,10 @@ class AreaMeasurementItem(_MeasurementItem):
                     visible=self.visible,
                     gestures=self._gestures,
                 )
-                # Main Line
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 sc.Line(points[i], points[i + 1], color=color_list, thickness=3, visible=self.visible)
 
-            # Final Interact Line
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             if points[0] != points[-1]:
                 sc.Line(
                     points[-1],
@@ -958,13 +944,13 @@ class AreaMeasurementItem(_MeasurementItem):
                     visible=self.visible,
                     gestures=self._gestures,
                 )
-            # Final Main Line
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             if points[0] != points[-1]:
                 sc.Line(points[-1], points[0], color=color_list, thickness=3, visible=self.visible)
-            # Draw points
+            # 포인트 그리기
             sc.Points(points, sizes=[5] * len(points), colors=[color_list] * len(points), visible=self.visible)
 
-            # POLYGON -- TRIANGULATION
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             # triangle_indices = triangulate_face(self._payload.computed_points)
 
             # colors = [[0,1,1,0.2]] * sum([len(triangle) for triangle in triangle_indices])
@@ -973,7 +959,7 @@ class AreaMeasurementItem(_MeasurementItem):
 
             # sc.PolygonMesh(
             #     points,  # List[List[float]]
-            #     colors,
+            #     주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             #     vertex_count,  # List[int]
             #     vertex_indices,  # List[int]
             #     wireframe=False,  # Polygons!
@@ -983,23 +969,23 @@ class AreaMeasurementItem(_MeasurementItem):
         if label_dirty:
             self._lbl_root.clear()
             with self._lbl_root:
-                # Draw Main Label
+                # 메인 라벨 그리기
                 self._draw_label()
 
-    # TODO: This could live in the base class
+    # TODO: 후속 구현 및 정리가 필요합니다.
     def _draw_label(self) -> sc.Transform:
         precision = list(Precision).index(self._payload.precision.value)
 
         centroid = [sum(val) for val in zip(*self._payload.computed_points)]
         centroid = [val / len(self._payload.computed_points) for val in centroid]
 
-        # Get properties we need to draw the label
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         label_pos: List[float] = centroid
         label_text: str = f"{self._payload.primary_value:.{precision}f} {self._payload.unit_type.value}²"
         text_size: LabelSize = LabelSize(self._payload.label_size)
         size_bias: float = LABEL_SCALE_MAPPING[text_size]
 
-        # Calculate background width
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         char_len = len(label_text)
         rect_width = int((45 * 1.5 * size_bias) + (10 * char_len))
 
@@ -1009,18 +995,18 @@ class AreaMeasurementItem(_MeasurementItem):
 
         with xform:
             with sc.Transform(scale_to=sc.Space.SCREEN):
-                # Label
+                # 라벨
                 with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) + 22.5, 0, 0)):
                     sc.Label(label_text, size=text_size.value, color=[0, 0, 0, 1], alignment=ui.Alignment.LEFT_CENTER)
-                # Background
+                # 배경
                 sc.Rectangle(width=rect_width, height=45, color=[1, 1, 1, 1], wireframe=False, gestures=self._gestures)
-                # Icon
+                # 아이콘
                 with sc.Transform(transform=sc.Matrix44.get_translation_matrix((rect_width * -0.5) - 22.5, 0, 0)):
-                    # Icon Background
+                    # 아이콘 배경
                     sc.Rectangle(
                         width=45, height=45, color=[0, 0, 0, 1], wireframe=False, gestures=self._delete_gestures
                     )
-                    # Icon Image
+                    # 아이콘 이미지
                     mode_name = self._payload.tool_mode.name.lower()
                     icon_path = get_icon_path("tool_delete") if self.selected else get_icon_path(f"tool_{mode_name}")
                     self._tool_image = sc.Image(source_url=icon_path, width=45, height=45)

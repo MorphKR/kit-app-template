@@ -121,6 +121,7 @@ class MeasurementManager:
             self._command_callback_ids.append(command_callback_id)
 
     def __del__(self):
+        """__del__ 동작을 수행합니다."""
         if self.__objects_changed_task and not self.__objects_changed_task.done():
             self.__objects_changed_task.cancel()
         self.__objects_changed_task = None
@@ -149,18 +150,22 @@ class MeasurementManager:
             self.__stage_sub = None
 
     def destroy(self):
+        """destroy 동작을 수행합니다."""
         self.__del__()
 
     @classmethod
     def deinit(cls):
+        """deinit 동작을 수행합니다."""
         cls._instance.destroy()
         del cls._instance
 
     @property
     def selected(self) -> List[MeasurePrim]:
+        """selected 동작을 수행합니다."""
         return self._model.get_selected()
 
     def __new__(cls):
+        """__new__ 동작을 수행합니다."""
         if not hasattr(cls, "_instance"):
             cls._instance = super().__new__(cls)
             cls._instance.__singleton_init__()
@@ -198,15 +203,18 @@ class MeasurementManager:
                 measure_prim._prim.SetMetadata("no_delete", True)
 
     def __on_read_only_notif(self):
+        """__on_read_only_notif 동작을 수행합니다."""
         self.__read_only_dismissed = True
 
     def __on_edit_target_changed(self, payload, in_session: bool):
+        """__on_edit_target_changed 동작을 수행합니다."""
         if self._in_live_session == in_session:
             return
         self._in_live_session = in_session
         self.__reset()
 
     def __on_pre_remove_prim_do(self, params):
+        """__on_pre_remove_prim_do 동작을 수행합니다."""
         paths = params.get("paths", None)  # List[Union[str, Sdf.Path]]
 
         # dedup the measure prims
@@ -228,12 +236,14 @@ class MeasurementManager:
             omni.kit.commands.execute("_RestoreMeasurementOnUndo", measurements=list(delete_measure_prims))
 
     def __on_post_remove_prim_undo(self, params):
+        """__on_post_remove_prim_undo 동작을 수행합니다."""
         paths = params.get("paths", None)  # List[Union[str, Sdf.Path]]
 
         if not paths:
             return
 
     def __on_prim_spec_event(self, payload, in_session: bool):
+        """__on_prim_spec_event 동작을 수행합니다."""
         if not payload:
             return
         dirty_specs = []
@@ -254,6 +264,7 @@ class MeasurementManager:
             dirty_specs.extend([Sdf.Path(spec) for spec in specs if spec.startswith("/Viewport_Measure")])
 
     def __on_objects_changed(self, notice) -> None:
+        """__on_objects_changed 동작을 수행합니다."""
         if not notice:
             return
 
@@ -269,6 +280,7 @@ class MeasurementManager:
     # TODO: Clean up the logic here to try and simplify
     @carb.profiler.profile
     async def _process_pending_changed_path(self):
+        """_process_pending_changed_path 동작을 수행합니다."""
         await get_app().next_update_async()  # Allow for fabric to settle before updating measurements
 
         changed_paths = self.__pending_changed_paths.copy()
@@ -349,6 +361,7 @@ class MeasurementManager:
         # TODO: rebuild_bbox_wireframes_from_measurements - 흰색 AABB 와이어프레임 복원 (추후 구현)
 
     def _create_internal(self, measure_payload: MeasurePayload):
+        """_create_internal 동작을 수행합니다."""
         with ReferenceManager().edit_context:
             stage = ou.get_context().get_stage()
             root_prim = stage.GetPrimAtPath("/Viewport_Measure")
@@ -388,6 +401,7 @@ class MeasurementManager:
         cmds.execute("CreateMeasurementCommand", measure_payload=measure_payload)
 
     async def add_measure_prim(self, spec_path: str):
+        """add_measure_prim 동작을 수행합니다."""
         await omni.kit.app.get_app().next_update_async()
         await omni.kit.app.get_app().next_update_async()
         measure_prim = MeasurePrim.from_prim(spec_path)
@@ -396,33 +410,40 @@ class MeasurementManager:
         ReferenceManager().measure_scene.create(measure_prim)
 
     def remove_measure_prim(self, uuid: int):
+        """remove_measure_prim 동작을 수행합니다."""
         ReferenceManager().measure_scene.delete(uuid)
         self._model.remove(uuid)
 
     def set_visibility_all(self, visible: bool):
+        """set_visibility_all 동작을 수행합니다."""
         for measure_prim in self._model.get_items():
             measure_prim.payload.visible = visible
             ReferenceManager().measure_scene.update(measure_prim.payload)
 
     def set_visibility(self, uuid: int, visible: bool):
+        """set_visibility 동작을 수행합니다."""
         measure_prim: MeasurePrim = self.read(uuid)
         measure_prim.payload.visible = visible
         ReferenceManager().measure_scene.update(measure_prim.payload)
 
     def frame_measurement(self, uuid: int):
+        """frame_measurement 동작을 수행합니다."""
         measure_prim: MeasurePrim = self.read(uuid)
         measure_prim.frame()
 
     def read(self, uuid: int) -> MeasurePrim:
+        """read 동작을 수행합니다."""
         return self._model.get_item(uuid)
 
     def rename(self, uuid: int, name: str) -> MeasurePrim:
+        """rename 동작을 수행합니다."""
         old_measure_prim: MeasurePrim = MeasurementManager().read(uuid)
         old_path = old_measure_prim.path
         new_path = Sdf.Path(old_path.ReplaceName(name))
         cmds.execute("MovePrim", path_from=old_path, path_to=new_path)
 
     def update(self, uuid: int):
+        """update 동작을 수행합니다."""
         return NotImplementedError
 
     def delete(self, uuid: int) -> bool:

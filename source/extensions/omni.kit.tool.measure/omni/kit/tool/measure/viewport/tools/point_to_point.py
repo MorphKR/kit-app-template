@@ -34,11 +34,11 @@ class PointToPointModel(ViewportModeModel):
         self._end_point: PositionItem = PositionItem(changed_fn=self._on_point_changed)
         self._end_prim: PrimRefItem = PrimRefItem()
 
-        # Metadata
+        # 메타데이터
         self._surface_normal: Optional[Gf.Vec3d] = None
 
-        # Scene UI elements
-        self._color = [0, 1, 1, 1]  # default to aqua blue
+        # Scene UI 요소
+        self._color = [0, 1, 1, 1]  # 기본값은 아쿠아 블루입니다.
         self._ui_points: Optional[sc.Points] = None
         self._ui_line: Optional[sc.Line] = None
 
@@ -59,14 +59,14 @@ class PointToPointModel(ViewportModeModel):
         self._start_prim.update(None)
         self._end_point.value = [0, 0, 0]
         self._end_prim.value = None
-        # labels
+        # 라벨
         self._ui_scene_label.visible(False)
         self._ui_x_label.visible(False)
         self._ui_y_label.visible(False)
         self._ui_z_label.visible(False)
         self._ui_stack_label.visible = False
         self._ui_perpendicular.visible = False
-        # State
+        # 상태
         self.creation_state = MeasureCreationState.START_SELECTION
 
     def draw(self):
@@ -74,9 +74,9 @@ class PointToPointModel(ViewportModeModel):
 
         self._root.clear()
         with self._root:
-            # Line
+            # 선
             self._ui_line = sc.Line(self._start_point.value, self._end_point.value, color=self._color, thickness=3)
-            # Points
+            # 포인트
             self._ui_points = sc.Points(
                 [self._start_point.value, self._end_point.value], sizes=[5, 5], colors=[self._color] * 2
             )
@@ -84,7 +84,7 @@ class PointToPointModel(ViewportModeModel):
             if self.creation_state == MeasureCreationState.FINALIZE:
                 self._draw_xyz()
 
-    # TODO: Optimize and solely use Gf.Vec3d
+    # TODO: 후속 구현 및 정리가 필요합니다.
     def _draw_xyz(self) -> None:
         display_axis: DisplayAxisSpace = ReferenceManager().ui_display_panel.display_axis
         if display_axis == DisplayAxisSpace.NONE:
@@ -94,7 +94,7 @@ class PointToPointModel(ViewportModeModel):
         end: Gf.Vec3d = self._end_point.vector
 
         if display_axis == DisplayAxisSpace.WORLD:
-            # Calculate support line info
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             x_start, x_end = Vec3d(start), Vec3d(end[0], start[1], start[2])  # [start, (end.x, start.y, start.z)]
             y_start, y_end = x_end, Vec3d(end[0], end[1], start[2])  # [x_end, (end.x, end.y, start.z)]
             z_start, z_end = y_end, Vec3d(end)
@@ -104,7 +104,7 @@ class PointToPointModel(ViewportModeModel):
                 return
 
             # Get the first prim's local quaternion rotation
-            rot_matrix = self._start_prim.local_xform.ExtractRotationMatrix()  # Use this for unit vectors
+            rot_matrix = self._start_prim.local_xform.ExtractRotationMatrix()  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             x_vec, y_vec, z_vec = (rot_matrix.GetRow(i) for i in range(3))
 
             yellow = start - end
@@ -115,7 +115,7 @@ class PointToPointModel(ViewportModeModel):
             y_start, y_end = x_end, (y_vec * -y_len) + x_end
             z_start, z_end = y_end, Vec3d(end)
 
-        # Calculate support line distances
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         x_dist = (x_start - x_end).GetLength()
         y_dist = (y_start - y_end).GetLength()
         z_dist = (z_start - z_end).GetLength()
@@ -125,10 +125,10 @@ class PointToPointModel(ViewportModeModel):
         y_label = (y_start + y_end) * 0.5
         z_label = (z_start + z_end) * 0.5
 
-        # Get label precision int
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         p_int = self._get_precision_value()
 
-        # Calculate stacked positions
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         _stacked: bool = True
         if _stacked:
             centroid = (start + end + y_start) * 0.333
@@ -148,23 +148,23 @@ class PointToPointModel(ViewportModeModel):
             self._ui_stack_label.visible = True
 
         if x_dist != 0:
-            x_line = sc.Line([*x_start], [*x_end], color=ui.color("#AA5555"), thickness=3)  # start point to end point X
+            x_line = sc.Line([*x_start], [*x_end], color=ui.color("#AA5555"), thickness=3)  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             # x_txt, x_unit = self._value_to_unit(x_dist)
             # self._ui_x_label.update(text=f"{x_txt:.{p_int}f}{x_unit}", position=[*x_label], visible=True)
         if y_dist != 0:
             y_line = sc.Line(
                 [*y_start], [*y_end], color=ui.color("#71A376"), thickness=3
-            )  # x_line X END to end point Y
+            )  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             # y_txt, y_unit = self._value_to_unit(y_dist)
             # self._ui_y_label.update(text=f"{y_txt:.{p_int}f}{y_unit}", position=[*y_label], visible=True)
         if z_dist != 0:
-            z_line = sc.Line([*z_start], [*z_end], color=ui.color("#4F7DA0"), thickness=3)  # y_line Z to end point
+            z_line = sc.Line([*z_start], [*z_end], color=ui.color("#4F7DA0"), thickness=3)  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             # z_txt, z_unit = self._value_to_unit(z_dist)
             # self._ui_z_label.update(text=f"{z_txt:.{p_int}f}{z_unit}", position=[*z_label], visible=True)
 
     def _draw_surface_normal(self) -> Gf.Vec3d:
         start, end = self._start_point.vector, self._end_point.vector
-        proj_length = 100  # Default
+        proj_length = 100  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
 
         if self.creation_state == MeasureCreationState.START_SELECTION:
             projection = (self._surface_normal * -proj_length) + start
@@ -182,7 +182,7 @@ class PointToPointModel(ViewportModeModel):
             return
 
         # Check if we're using the perpendicular mode or not. Must align label to correct distance
-        if ReferenceManager().ui_placement_panel.snap_to == SnapTo.CUSTOM:  # Normal mode
+        if ReferenceManager().ui_placement_panel.snap_to == SnapTo.CUSTOM:  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             label_pos = (self._start_point.vector + self._end_point.vector) * 0.5
             label_dist = (self._start_point.vector - self._end_point.vector).GetLength()
         else:
@@ -190,7 +190,7 @@ class PointToPointModel(ViewportModeModel):
             label_dist = (Gf.Vec3d(*self._ui_perpendicular.start) - Gf.Vec3d(*self._ui_perpendicular.end)).GetLength()
         label_text, label_unit = self._value_to_unit(label_dist)
 
-        # Get label precision int
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         p_int = self._get_precision_value()
 
         self._ui_scene_label.set_position(label_pos)
@@ -208,13 +208,13 @@ class PointToPointModel(ViewportModeModel):
 
         self._update_scene_label(self._start_point.value != self._end_point.value)
 
-    # Input Handling
+    # 입력 처리
     def _on_moved(self, coords: Sequence[float], result: omni.kit.raycast.query.RayQueryResult):
         if self.creation_state in [MeasureCreationState.START_SELECTION, MeasureCreationState.END_SELECTION]:
-            # Get a snap position if available
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             self._snap_data: Optional[Dict[str, Any]] = MeasureSnapProviderManager().get_snap_position(coords, result)
 
-            # If snap data is not found, we need to be sure to update the UI
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             if not self._snap_data:
                 self._set_snap_marker_position(None)
                 if self.creation_state == MeasureCreationState.END_SELECTION:
@@ -222,11 +222,11 @@ class PointToPointModel(ViewportModeModel):
                 return
 
             # TODO: Really should convert List[float] to Gf.Vec3d
-            # Set snap marker to new position
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             snap_type: SnapMode = self._snap_data["type"]
             snap_position: List[float] = [*self._snap_data["position"]]
 
-            # If we are in END_SELECTION, we need to update the rubber band line via setting hte endpoint.
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             if self.creation_state == MeasureCreationState.END_SELECTION:
                 self._end_point.value = snap_position
 
@@ -248,20 +248,20 @@ class PointToPointModel(ViewportModeModel):
             prim_path: str = self._snap_data["path"]
             snap_type: SnapMode = self._snap_data["type"]
 
-            # Assign to start/end point value, get the prim based on the selection, set next state
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             if self.creation_state == MeasureCreationState.START_SELECTION:
                 self.creation_state = MeasureCreationState.END_SELECTION
                 self._start_point.value = point_coords
-                self._end_point.value = point_coords  # Overlap the second point until updated
+                self._end_point.value = point_coords  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 self._start_prim.update(prim_path)
-                # Checking for the perpendicular state
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 if ReferenceManager().ui_placement_panel.snap_to == SnapTo.PERPENDICULAR:
                     self._surface_normal = self._snap_data["normal"]
                     self._draw_surface_normal()
                 return
             elif self.creation_state == MeasureCreationState.END_SELECTION:
                 self.creation_state = MeasureCreationState.FINALIZE
-                # Checking for perpendicular state and setting the correct position
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 if ReferenceManager().ui_placement_panel.snap_to == SnapTo.PERPENDICULAR:
                     self._end_point.value = [*self._draw_surface_normal()]
                 else:
@@ -269,10 +269,10 @@ class PointToPointModel(ViewportModeModel):
 
                 self._set_snap_marker_position(None)
                 self._end_prim.update(prim_path)
-                self._ui_line.color = [1, 1, 0, 1]  # Yellow for selection
+                self._ui_line.color = [1, 1, 0, 1]  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
 
         if self.creation_state == MeasureCreationState.FINALIZE:
-            # Unsure what to do at this point being that the user will be selecting/deslecting items
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             # in the viewport without confirmation of 'finalizing' in a generic way.
             # TODO: move -> saving each measurement now(for testing)
             self._on_save()

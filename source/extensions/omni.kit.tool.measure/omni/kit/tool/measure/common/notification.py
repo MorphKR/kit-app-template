@@ -19,18 +19,22 @@ import omni.kit.notification_manager as nm
 
 
 def __post_notification(message: str, status=nm.NotificationStatus):
+    """__post_notification 동작을 수행합니다."""
     nm.post_notification(message, status=status)
 
 
 def post_info_notification(message: str) -> None:
+    """post_info_notification 동작을 수행합니다."""
     __post_notification(message, nm.NotificationStatus.INFO)
 
 
 def post_warn_notification(message: str) -> None:
+    """post_warn_notification 동작을 수행합니다."""
     __post_notification(message, nm.NotificationStatus.WARNING)
 
 
 def post_disreguard_future_notification(message: str, callback: Callable):
+    """post_disreguard_future_notification 동작을 수행합니다."""
     buttons = [nm.NotificationButtonInfo("OK", None), nm.NotificationButtonInfo("OK - Don't Remind Me", callback)]
 
     nm.post_notification(message, status=nm.NotificationStatus.INFO, hide_after_timeout=False, button_infos=buttons)

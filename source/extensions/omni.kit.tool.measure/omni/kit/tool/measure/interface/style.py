@@ -31,10 +31,12 @@ def __get_icon(name: str, extension: str = "svg") -> str:
 
 # TODO: This is temporary
 def get_icon_path(name: str, as_png: bool = False) -> str:
+    """get_icon_path 동작을 수행합니다."""
     return __get_icon(name, extension="png" if as_png else "svg")
 
 
 def generate_toolbar_button_style(name: str) -> Dict:
+    """generate_toolbar_button_style 동작을 수행합니다."""
     return {
         "Button": {"margin": 0, "background_color": 0x0, "border_radius": 4},
         "Button.Image": {"image_url": __get_icon(f"tool_{name}"), "color": _CLR_LABEL},

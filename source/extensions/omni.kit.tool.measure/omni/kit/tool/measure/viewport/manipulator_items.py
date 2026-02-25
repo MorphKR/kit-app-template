@@ -16,53 +16,66 @@ from pxr import Gf, Usd, UsdGeom
 
 ## Manipulator Items
 class PositionItem(sc.AbstractManipulatorItem):
+    """PositionItem 클래스 설명입니다."""
     def __init__(self, value: List[float] = [0.0, 0.0, 0.0], changed_fn: Optional[Callable[[], None]] = None):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
         self._value: List[float] = value
         self._change_fn = changed_fn
 
     @property
     def vector(self) -> Gf.Vec3d:
+        """vector 동작을 수행합니다."""
         return Gf.Vec3d(self._value)
 
     @vector.setter
     def vector(self, value: Gf.Vec3d):
+        """vector 동작을 수행합니다."""
         self._value = [*value]
 
     @property
     def value(self) -> List[float]:
+        """value 동작을 수행합니다."""
         return self._value
 
     @value.setter
     def value(self, value: List[float]) -> None:
+        """value 동작을 수행합니다."""
         self._value = value
         self._on_value_changed()
 
     def _on_value_changed(self):
+        """_on_value_changed 동작을 수행합니다."""
         if not self._change_fn:
             return
         self._change_fn()
 
     def add_value_changed_fn(self, function: Callable[[], None]):
+        """add_value_changed_fn 동작을 수행합니다."""
         self._change_fn = function
 
 
 class MultiPositionItem(sc.AbstractManipulatorItem):
+    """MultiPositionItem 클래스 설명입니다."""
     def __init__(self, value: List[List[float]] = [], changed_fn: Optional[Callable[[], None]] = None):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
         self._value: List[List[float]] = value
         self._change_fn = changed_fn
 
     @property
     def length(self) -> int:
+        """length 동작을 수행합니다."""
         return len(self._value)
 
     @property
     def vectors(self) -> List[Gf.Vec3d]:
+        """vectors 동작을 수행합니다."""
         return [Gf.Vec3d(*v) for v in self._value]
 
     @property
     def value(self) -> List[List[float]]:
+        """value 동작을 수행합니다."""
         return self._value
 
     def reset(self) -> None:
@@ -103,30 +116,37 @@ class MultiPositionItem(sc.AbstractManipulatorItem):
             return
 
     def _on_value_changed(self) -> None:
+        """_on_value_changed 동작을 수행합니다."""
         if not self._change_fn:
             return
         self._change_fn()
 
     def add_value_changed_fn(self, function: Callable[[], None]):
+        """add_value_changed_fn 동작을 수행합니다."""
         self._change_fn = function
 
 
 class PrimRefItem(sc.AbstractManipulatorItem):
+    """PrimRefItem 클래스 설명입니다."""
     def __init__(self, value: Optional[str] = None):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
         self._path: Optional[str] = value
         self._prim: Optional[Usd.Prim] = self.update(self._path) if value else None
 
     @property
     def path(self):
+        """path 동작을 수행합니다."""
         return self._path
 
     @property
     def prim(self) -> Optional[Usd.Prim]:
+        """prim 동작을 수행합니다."""
         return self._prim
 
     @property
     def local_xform(self) -> Optional[Gf.Matrix4d]:
+        """local_xform 동작을 수행합니다."""
         if not self.prim:
             return None
         xform = UsdGeom.Xformable(self._prim)

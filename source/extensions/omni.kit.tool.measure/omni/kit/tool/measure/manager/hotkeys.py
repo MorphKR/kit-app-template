@@ -6,6 +6,7 @@ from ..common.settings import SETTINGS_MEASURE_ENABLE_HOTKEYS
 
 
 class Hotkey:
+    """Hotkey 클래스 설명입니다."""
     def __init__(
         self,
         name: str,
@@ -13,6 +14,7 @@ class Hotkey:
         key: Optional[str],  # if None, settings will be fetched
         filter_context: Optional[str] = None,
     ) -> None:
+        """__init__ 동작을 수행합니다."""
         self._name = name
         self._key = key
         self._callback = callback
@@ -22,21 +24,26 @@ class Hotkey:
 
     @property
     def name(self) -> str:
+        """name 동작을 수행합니다."""
         return self._name
 
     @property
     def key(self) -> str:
+        """key 동작을 수행합니다."""
         return self._key
 
     @property
     def callback(self) -> Callable[[], None]:
+        """callback 동작을 수행합니다."""
         return self._callback
 
     @property
     def filter_context(self) -> str:
+        """filter_context 동작을 수행합니다."""
         return self._filter_context
 
     def register(self, extension_name: str, action_name: str, action_reg, hotkey_reg, display_name: str = ""):
+        """register 동작을 수행합니다."""
         try:
             from omni.kit.hotkeys.core import HotkeyFilter
         except:  # pragma: no cover
@@ -55,6 +62,7 @@ class Hotkey:
         )
 
     def deregister(self, action_reg, hotkey_reg):
+        """deregister 동작을 수행합니다."""
         if self._kit_hotkey:
             hotkey_reg.deregister_hotkey(self._kit_hotkey)
             self._kit_hotkey = None
@@ -64,7 +72,9 @@ class Hotkey:
 
 
 class HotkeyManager:
+    """HotkeyManager 클래스 설명입니다."""
     def __singleton_init__(self):
+        """__singleton_init__ 동작을 수행합니다."""
         self._settings = carb.settings.get_settings()
         self._extension_name = "omni.kit.tool.measure"
         self._enable_hotkeys_sub = self._settings.subscribe_to_node_change_events(
@@ -82,6 +92,7 @@ class HotkeyManager:
 
     # singleton model, set once - use everywhere
     def __new__(cls, *args, **kwargs):
+        """__new__ 동작을 수행합니다."""
         if not hasattr(cls, "_instance"):
             cls._instance = super().__new__(cls, *args, **kwargs)
             cls._instance.__singleton_init__()
@@ -89,17 +100,21 @@ class HotkeyManager:
 
     @property
     def extension_name(self) -> str:
+        """extension_name 동작을 수행합니다."""
         return self._extension_name
 
     @extension_name.setter
     def extension_name(self, value: str):
+        """extension_name 동작을 수행합니다."""
         self._extension_name = value
 
     @property
     def hotkey_context(self):
+        """hotkey_context 동작을 수행합니다."""
         return self._hotkey_context
 
     def add_hotkey(self, hotkey: Hotkey):
+        """add_hotkey 동작을 수행합니다."""
         if hotkey.name in self._hotkeys:  # pragma: no cover
             carb.log_warn(f"Hotkey {hotkey.name} is already defined")
             return
@@ -107,26 +122,31 @@ class HotkeyManager:
         self.register_hotkey(hotkey)
 
     def register_hotkey(self, hotkey: Hotkey):
+        """register_hotkey 동작을 수행합니다."""
         enabled = self._settings.get_as_bool(SETTINGS_MEASURE_ENABLE_HOTKEYS) or False
         if enabled and self._load_registry():
             self._register_hotkey(hotkey)
 
     def deregister_hotkey(self, hotkey: Hotkey):
+        """deregister_hotkey 동작을 수행합니다."""
         if self._load_registry():
             hotkey.deregister(self._action_reg, self._hotkey_reg)
 
     def deregister_all_hotkeys(self):  # pragma: no cover
+        """deregister_all_hotkeys 동작을 수행합니다."""
         if self._load_registry():
             for hotkey in self._hotkeys.values():
                 self._deregister_hotkey(hotkey)
 
     def get_key(self, setting_path: str, default: Optional[str]) -> Optional[str]:
+        """get_key 동작을 수행합니다."""
         key = self._settings.get_as_string(setting_path)
         if key is None or key == "":
             return default
         return key
 
     def remove_hotkey_context(self, context: str):
+        """remove_hotkey_context 동작을 수행합니다."""
         if self._load_registry():
             all_contexts = []
             while (top_context := self._hotkey_context.get()) is not None:
@@ -137,14 +157,17 @@ class HotkeyManager:
                     self._hotkey_context.push(c)
 
     def _register_hotkey(self, hotkey: Hotkey):
+        """_register_hotkey 동작을 수행합니다."""
         action_name = self._extension_name + "-" + hotkey.name
         display_name = "measure::" + hotkey.name
         hotkey.register(self._extension_name, action_name, self._action_reg, self._hotkey_reg, display_name)
 
     def _deregister_hotkey(self, hotkey: Hotkey):
+        """_deregister_hotkey 동작을 수행합니다."""
         hotkey.deregister(self._action_reg, self._hotkey_reg)
 
     def _load_registry(self) -> bool:
+        """_load_registry 동작을 수행합니다."""
         if self._hotkey_reg is None or self._action_reg is None:
             try:
                 import omni.kit.actions.core
@@ -159,6 +182,7 @@ class HotkeyManager:
         return True
 
     def _update_hotkeys(self, item, event):
+        """_update_hotkeys 동작을 수행합니다."""
         if self._load_registry():
             enabled = self._settings.get_as_bool(SETTINGS_MEASURE_ENABLE_HOTKEYS) or False
             if enabled != self._hotkeys_enabled:
@@ -171,14 +195,17 @@ class HotkeyManager:
 
     @classmethod
     def deinit(cls):
+        """deinit 동작을 수행합니다."""
         if hasattr(cls, "_instance"):
             cls._instance.destroy()
             del cls._instance
 
     def __del__(self):
+        """__del__ 동작을 수행합니다."""
         self.destroy()
 
     def destroy(self):
+        """destroy 동작을 수행합니다."""
         if self._enable_hotkeys_sub:
             self._settings.unsubscribe_to_change_events(self._enable_hotkeys_sub)
             self._enable_hotkeys_sub = None

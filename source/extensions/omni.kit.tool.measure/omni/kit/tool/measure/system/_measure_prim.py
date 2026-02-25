@@ -26,7 +26,9 @@ from ._measure_payload import MeasurePayload
 
 
 class MeasureSubItem(ui.AbstractItem):
+    """MeasureSubItem 클래스 설명입니다."""
     def __init__(self, name: str, value, uuid_ref: int, path_ref: str):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
         self.name = name
         self.value = value
@@ -36,7 +38,9 @@ class MeasureSubItem(ui.AbstractItem):
 
 
 class MeasurePrim(ui.AbstractItem):
+    """MeasurePrim 클래스 설명입니다."""
     def __init__(self, prim_path: str, payload: MeasurePayload):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
 
         self.__ctx = ou.get_context()
@@ -58,39 +62,48 @@ class MeasurePrim(ui.AbstractItem):
 
     @property
     def children(self) -> List[MeasureSubItem]:
+        """children 동작을 수행합니다."""
         return self._children
 
     @property
     def path(self):
+        """path 동작을 수행합니다."""
         return self._prim.GetPrimPath()
 
     @property
     def uuid(self) -> int:
+        """uuid 동작을 수행합니다."""
         return self.__payload.uuid
 
     @property
     def visible(self) -> bool:
+        """visible 동작을 수행합니다."""
         return self.__payload.visible
 
     @property
     def name(self) -> str:
+        """name 동작을 수행합니다."""
         return self.__payload.name
 
     @name.setter
     def name(self, value: str) -> None:
+        """name 동작을 수행합니다."""
         self.__payload.name = value
         self.set_attribute("measure:prop:name", value, Sdf.ValueTypeNames.String)
 
     @property
     def mode(self) -> MeasureMode:
+        """mode 동작을 수행합니다."""
         return self._mode
 
     @property
     def payload(self) -> MeasurePayload:
+        """payload 동작을 수행합니다."""
         return self.__payload
 
     @staticmethod
     def from_prim(prim_path: str) -> Optional["MeasurePrim"]:
+        """from_prim 동작을 수행합니다."""
         ctx = ou.get_context()
         prim = ctx.get_stage().GetPrimAtPath(prim_path)
 
@@ -104,6 +117,7 @@ class MeasurePrim(ui.AbstractItem):
         return None
 
     def __create_prim(self, prim_path: str) -> "Usd.Prim":
+        """__create_prim 동작을 수행합니다."""
         with omni.kit.undo.group():
             cmds.execute("CreatePrimCommand", prim_type="", prim_path=prim_path)
             self._prim = self.__stage.GetPrimAtPath(prim_path)
@@ -119,6 +133,7 @@ class MeasurePrim(ui.AbstractItem):
             self.hide_measure_root()
 
     def hide_measure_root(self):
+        """hide_measure_root 동작을 수행합니다."""
         parent_prim = self._prim.GetParent()
         parent_name = parent_prim.GetName()
         if parent_name == "Viewport_Measure":
@@ -127,6 +142,7 @@ class MeasurePrim(ui.AbstractItem):
     @carb.profiler.profile
     def _load_payload(self, payload: MeasurePayload):
         # Core
+        """_load_payload 동작을 수행합니다."""
         self.set_attribute("measure:uuid", payload.uuid, Sdf.ValueTypeNames.Int)
         # Metadata
         MeasurePayload.write_prim_paths(self._prim, payload.prim_paths)
@@ -151,7 +167,9 @@ class MeasurePrim(ui.AbstractItem):
     # TODO: This object creation can be simplified and have cleaner approach
     @carb.profiler.profile
     def __update_children(self):
+        """__update_children 동작을 수행합니다."""
         def name_mapping(tool_mode: MeasureMode):
+            """name_mapping 동작을 수행합니다."""
             if tool_mode not in [MeasureMode.POINT_TO_POINT, MeasureMode.ANGLE, MeasureMode.MESH]:
                 return None
             if tool_mode == MeasureMode.MESH:
@@ -174,6 +192,7 @@ class MeasurePrim(ui.AbstractItem):
 
     @carb.profiler.profile
     def refresh_payload(self):
+        """refresh_payload 동작을 수행합니다."""
         if not self._prim:
             return
 
@@ -183,6 +202,7 @@ class MeasurePrim(ui.AbstractItem):
         self._load_payload(self.__payload)
 
     def get_attribute(self, attr_name: str, default=None):
+        """get_attribute 동작을 수행합니다."""
         if not self._prim:
             return None
 
@@ -195,6 +215,7 @@ class MeasurePrim(ui.AbstractItem):
         return default
 
     def set_attribute(self, attr_name: str, value, type_name: Sdf.ValueTypeNames) -> None:
+        """set_attribute 동작을 수행합니다."""
         if not self._prim:
             return
 
@@ -216,13 +237,16 @@ class MeasurePrim(ui.AbstractItem):
                 ).do()
 
     def set_mode(self, mode: MeasureMode) -> None:
+        """set_mode 동작을 수행합니다."""
         self._mode = mode
         self._compute = COMPUTE_MAP[mode]()
 
     def _set_compute(self, mode: MeasureMode) -> MeasureCompute:
+        """_set_compute 동작을 수행합니다."""
         return COMPUTE_MAP[mode]()
 
     def frame(self) -> bool:
+        """frame 동작을 수행합니다."""
         viewport_api = get_active_viewport()
         if not viewport_api:
             return False

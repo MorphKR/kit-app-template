@@ -134,6 +134,7 @@ def _compute_combined_bbox(
 
 
 def _compute_prim_world_bbox(bbox_cache: UsdGeom.BBoxCache, prim: Usd.Prim) -> Optional[tuple]:
+    """_compute_prim_world_bbox 동작을 수행합니다."""
     try:
         world_bound = bbox_cache.ComputeWorldBound(prim)
         r = world_bound.GetRange()

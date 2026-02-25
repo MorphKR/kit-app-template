@@ -24,15 +24,19 @@ from .constant import DistanceType, LabelSize, MeasureMode, Precision, UnitType
 
 
 class CreateMeasurementCommand(commands.Command):
+    """커맨드로 측정 prim을 생성/삭제합니다."""
     def __init__(self, measure_payload: MeasurePayload):
+        """실행에 필요한 상태를 초기화합니다."""
         self._payload: MeasurePayload = measure_payload
 
     def do(self):
+        """커맨드 실행 로직을 수행합니다."""
         with undo.disabled():
             MeasurementManager()._create_internal(self._payload)
 
     def undo(self):
-        # Set the created prim to be deletable
+        # :     
+        """커맨드 실행 결과를 되돌립니다."""
         measure_prim: MeasurePrim = MeasurementManager().read(self._payload.uuid)
         if measure_prim is None:
             return  # 이미 삭제되었거나 존재하지 않는 경우
@@ -43,6 +47,7 @@ class CreateMeasurementCommand(commands.Command):
 
 
 class CreateMeasurementPointToPointCommand(commands.Command):
+    """두 점 기반 Point-to-Point 측정을 생성/삭제합니다."""
     def __init__(
         self,
         prim_paths: List[str],
@@ -51,6 +56,7 @@ class CreateMeasurementPointToPointCommand(commands.Command):
         precision: Precision = Precision.HUNDRETH,
         label_size: LabelSize = LabelSize.MEDIUM,
     ):
+        """실행에 필요한 상태를 초기화합니다."""
         self._prim_paths = prim_paths
         self._points = MeasurePayload.world_to_local_points(points, prim_paths)
         self._unit_type = unit_type
@@ -58,6 +64,7 @@ class CreateMeasurementPointToPointCommand(commands.Command):
         self._label_size = label_size
 
     def do(self):
+        """커맨드 실행 로직을 수행합니다."""
         with undo.disabled():
             payload: MeasurePayload = MeasurePayload()
             payload.prim_paths = self._prim_paths
@@ -70,7 +77,8 @@ class CreateMeasurementPointToPointCommand(commands.Command):
             MeasurementManager()._create_internal(payload)
 
     def undo(self):
-        # Set the created prim to be deletable
+        # :     
+        """커맨드 실행 결과를 되돌립니다."""
         measure_prim: MeasurePrim = MeasurementManager().read(self._payload.uuid)
         if measure_prim is None:
             return  # 이미 삭제되었거나 존재하지 않는 경우
@@ -81,49 +89,37 @@ class CreateMeasurementPointToPointCommand(commands.Command):
 
 
 class RemoveMeasurementCommand(commands.Command):
-    """
-    Command that removes the measurement from Measurement Manager and Clears drawing
-    Undo recreates the measurement as a new measurement from scratch.
-    """
+    """측정 prim을 삭제하고 undo 시 복원합니다."""
 
     def __init__(self, measure_prim: MeasurePrim):
+        """실행에 필요한 상태를 초기화합니다."""
         self._measure_prim: MeasurePrim = measure_prim
         self._payload: MeasurePayload = self._measure_prim.payload
 
-    # Find the Measure + Draw node associated with the UUID and destroy it
+    # :     
     def do(self) -> None:
-        # unlock prim for delete
+        # :     
+        """커맨드 실행 로직을 수행합니다."""
         self._measure_prim._prim.SetMetadata("no_delete", False)
-        # Delete the prim
+        # :     
         commands.execute("DeletePrims", paths=[self._measure_prim.path])
         undo.get_undo_stack().pop()
 
     def undo(self) -> None:
+        """커맨드 실행 결과를 되돌립니다."""
         with undo.disabled():
-            # Recreate the measurement using the cached payload
+            # :     
             self._payload.visible = True  # Ensure the measurement is visible.
 
             MeasurementManager().create(self._payload)
 
-        # Clear selection
+        # :     
         selection = ou.get_context().get_selection()
         selection.clear_selected_prim_paths()
 
 
 class FramePointsCommand(commands.Command):
-    """
-    Transform a primitive to encompass the bounds of a list of points.
-
-    Args:
-        prim_to_move: Path to the primitive that is being moved.
-        points(Sequence[Gf.Vec3d]): Sequence of points to use to calculate the bounds to frame.
-        time_code(Usd.TimeCode): Timecode to set values at.
-        usd_context_name(str): Name of the usd context to work on.
-        aspect_ratio(float): Width / Height of the final image.
-        use_horizontal_fov(bool): Whether to use a camera's horizontal or vertical field of view for framing.
-        horizontal_fov(float): Default horizontal field-of-view to use for framing if one cannot be calculated.
-        zoom(float): Final zoom in or out of the framed box. Values above 0.5 move further away and below 0.5 go closer.
-    """
+    """점 목록을 화면에 담도록 대상 prim을 프레이밍합니다."""
 
     def __init__(
         self,
@@ -136,6 +132,7 @@ class FramePointsCommand(commands.Command):
         zoom: float = 0.45,
         horizontal_fov: float = 0.20656116130367255,
     ):
+        """실행에 필요한 상태를 초기화합니다."""
         self.__usd_context_name = usd_context_name
         self.__prim_to_move = prim_to_move
         self.__time_code = time_code if time_code is not None else Usd.TimeCode.Default()
@@ -147,6 +144,7 @@ class FramePointsCommand(commands.Command):
         self.__zoom = zoom
 
     def __compute_local_transform(self, stage: Usd.Stage):
+        """대상 prim의 로컬/부모/월드 변환을 계산합니다."""
         prim = stage.GetPrimAtPath(self.__prim_to_move)
         if not prim:
             carb.log_warn(f"Framing of UsdPrims failed, {self.__prim_to_move} doesn't exist")
@@ -171,6 +169,7 @@ class FramePointsCommand(commands.Command):
         return None, None, None, None
 
     def __calculate_distance(self, radius, prim):
+        """프레이밍에 필요한 카메라 거리를 계산합니다."""
         camera = UsdGeom.Camera(prim)
         h_fov_rad, v_fov_rad = self.__horizontal_fov, self.__horizontal_fov
         if camera:
@@ -201,6 +200,7 @@ class FramePointsCommand(commands.Command):
                 )
 
         def fit_horizontal():
+            """수평 기준 프레이밍 여부를 결정합니다."""
             if self.__use_horizontal_fov is not None:
                 return self.__use_horizontal_fov
             conform = carb.settings.get_settings().get("/app/hydra/aperture/conform")
@@ -224,6 +224,7 @@ class FramePointsCommand(commands.Command):
 
     def do(self):
         # Prims to frame bounds can be slightly more expensive than this, so validate we can move what was requested first
+        """커맨드 실행 로직을 수행합니다."""
         usd_context = ou.get_context(self.__usd_context_name)
         stage = usd_context.get_stage()
         local_xform, parent_xform, world_xform, prim = self.__compute_local_transform(stage)
@@ -263,16 +264,16 @@ class FramePointsCommand(commands.Command):
         # Frame against the aabox's bounding sphere
         radius = aabbox.GetSize().GetLength() * self.__zoom
 
-        # TODO: Get rid of some of this complication due to Viewport-1
+        # :     
         values, ortho_props = self.__calculate_distance(radius, prim)
         prim_path = prim.GetPath()
 
-        # For perspective, we really need the eye (it's translation)
-        # For ortho, only needed to get coi (length to target)
+        # :     
+        # :     
         eye_dir = Gf.Vec3d(0, 0, values[0] if not ortho_props else 50000)
         eye = target + local_xform.TransformDir(eye_dir)
 
-        # Mark center-of-interest accordingly (just length from target in local-space)
+        # :     
         coi_value = Gf.Vec3d(0, 0, -(eye - target).GetLength())
         coi_attr_name = "omni:kit:centerOfInterest"
         coi_attr = prim.GetAttribute(coi_attr_name)
@@ -294,7 +295,7 @@ class FramePointsCommand(commands.Command):
         )
 
         if ortho_props:
-            # Using time here causes issues with Viewport-1, so use default time for now
+            # :     
             time = self.__time_code if False else Usd.TimeCode.Default()
             commands.execute(
                 "ChangePropertyCommand",
@@ -346,6 +347,7 @@ class FramePointsCommand(commands.Command):
             )
 
     def undo(self):
+        """커맨드 실행 결과를 되돌립니다."""
         if not self.__created_property:
             return
         usd_context = ou.get_context(self.__usd_context_name)
@@ -360,45 +362,41 @@ class FramePointsCommand(commands.Command):
 
 
 class _RestoreMeasurementOnUndo(omni.kit.commands.Command):
-    """
-    Restore measurements on undo. (Does nothing on do or redo.)
-
-    This command is for internal use only. It may be changed or removed
-    without notice.
-
-    Args:
-        measurements (List[(str, str)])
-            The measurements to be restored.
-    """
+    """undo 시 측정 복원을 보조하는 내부 커맨드입니다."""
 
     # When the source prim for a connection is deleted OG removes all traces of the
     # connection. If the deletion is undone OG has no way of knowing that the restored
     # prim had a connection which should also be restored. This command is used to
     # restore those connections on undo.
     def __init__(self, measurements: List[MeasurePrim]):
+        """실행에 필요한 상태를 초기화합니다."""
         self._measurements: List[MeasurePrim] = measurements.copy()
         self.__recreate_task = None
         self._remove_command = []
 
     def destroy(self):
+        """내부 상태와 작업을 정리합니다."""
         if self.__recreate_task:
             if not self.__recreate_task.done():
                 self.__recreate_task.cancel()
             self.__recreate_task = None
 
     def do(self):
+        """커맨드 실행 로직을 수행합니다."""
         for measurement in self._measurements:
             command = RemoveMeasurementCommand(measurement)
             self._remove_command.append(command)
             command.do()
 
     def undo(self):
-        # We cannot do the reconnection yet because prim delete won't have created the prim's yry
+        # :     
+        """커맨드 실행 결과를 되돌립니다."""
         if self.__recreate_task is None or self.__recreate_task.done():
             self.__recreate_task = asyncio.ensure_future(self.__do_recreate())
 
     async def __do_recreate(self):
-        # Give OG a chance to create the prim's Node.
+        # :     
+        """한 프레임 대기 후 복원 작업을 수행합니다."""
         await omni.kit.app.get_app().next_update_async()
 
         for command in self._remove_command:
@@ -407,12 +405,14 @@ class _RestoreMeasurementOnUndo(omni.kit.commands.Command):
 
 
 def register() -> None:
+    """커맨드를 Kit command 시스템에 등록합니다."""
     commands.register(_RestoreMeasurementOnUndo)
     commands.register(CreateMeasurementCommand)
     commands.register(RemoveMeasurementCommand)
 
 
 def unregister() -> None:
+    """커맨드 등록을 해제합니다."""
     commands.unregister(_RestoreMeasurementOnUndo)
     commands.unregister(CreateMeasurementCommand)
     commands.unregister(RemoveMeasurementCommand)

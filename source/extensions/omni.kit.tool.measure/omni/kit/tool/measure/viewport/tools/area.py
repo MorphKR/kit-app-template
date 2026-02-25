@@ -280,7 +280,7 @@ class AreaModel(ViewportModeModel):
 
             if self.creation_state in [MeasureCreationState.INTERMEDIATE_SELECTION, MeasureCreationState.END_SELECTION]:
                 coords = self._get_axis_aligned_coord(snap_position)[0]
-                # TODO: Do we draw/update a new line to show the offset?
+        # TODO: Draw or update a new line to show the offset.
                 self._update_constrain_line(snap_position, coords)  # Update regardless, no visibility change.
                 self._ui_constrain_line.visible = coords != snap_position
 

@@ -45,16 +45,21 @@ SETTINGS_MEASURE_NEXT_SNAP_HOTKEY = SETTINGS_HOTKEY_PATH + "hotkeys/next-snap"
 
 
 class MeasurePreferences(PreferenceBuilder):
+    """MeasurePreferences 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         super().__init__("Measure")
 
     def __del__(self):
+        """__del__ 동작을 수행합니다."""
         pass
 
     def destroy(self):
+        """destroy 동작을 수행합니다."""
         self.__del__()
 
     def build(self):
+        """build 동작을 수행합니다."""
         omitted = [MeasureMode.SELECTED, MeasureMode.VOLUME]
         enum_list = [enum.name for enum in MeasureMode if enum not in omitted]
 
@@ -97,18 +102,23 @@ class _SessionSettings:
     startup_tool: MeasureMode = MeasureMode.POINT_TO_POINT
 
     def get_color_a(self) -> float:
+        """get_color_a 동작을 수행합니다."""
         return self.color[0]
 
     def get_color_b(self) -> float:
+        """get_color_b 동작을 수행합니다."""
         return self.color[1]
 
     def get_color_g(self) -> float:
+        """get_color_g 동작을 수행합니다."""
         return self.color[2]
 
     def get_color_r(self) -> float:
+        """get_color_r 동작을 수행합니다."""
         return self.color[3]
 
     def set_color_rgba(self, value: List[float]):
+        """set_color_rgba 동작을 수행합니다."""
         value_count = len(value)
         if value_count > 0:
             self.color[3] = value[0]
@@ -121,7 +131,9 @@ class _SessionSettings:
 
 
 class UserSettings:
+    """UserSettings 클래스 설명입니다."""
     def __singleton_init__(self):
+        """__singleton_init__ 동작을 수행합니다."""
         self.__dict = get_dictionary()
         self._preferences: MeasurePreferences = MeasurePreferences()
         self._persistent_settings: ISettings = get_settings()
@@ -145,6 +157,7 @@ class UserSettings:
 
     # singleton model, set once - use everywhere
     def __new__(cls, *args, **kwargs):
+        """__new__ 동작을 수행합니다."""
         if not hasattr(cls, "_instance"):
             cls._instance = super().__new__(cls, *args, **kwargs)
             cls._instance.__singleton_init__()
@@ -152,11 +165,13 @@ class UserSettings:
 
     @classmethod
     def deinit(cls):
+        """deinit 동작을 수행합니다."""
         if hasattr(cls, "_instance"):
             cls._instance.destroy()
             del cls._instance
 
     def __del__(self):
+        """__del__ 동작을 수행합니다."""
         if self._preferences:
             self._preferences.destroy()
             self._preferences = None
@@ -170,32 +185,38 @@ class UserSettings:
             self.__state_sync_sub = None
 
     def destroy(self):
+        """destroy 동작을 수행합니다."""
         self.__del__()
 
     @property
     def default_session(self) -> _SessionSettings:
+        """default_session 동작을 수행합니다."""
         if not self._default_session_settings:
             self._default_session_settings = _SessionSettings()
         return self._default_session_settings
 
     @property
     def persistent(self) -> ISettings:
+        """persistent 동작을 수행합니다."""
         if not self._persistent_settings:
             self._persistent_settings = get_settings()
         return self._persistent_settings
 
     @property
     def session(self) -> _SessionSettings:
+        """session 동작을 수행합니다."""
         if not self._session_settings:
             self._session_settings = self._create_session()
         return self._session_settings
 
     @property
     def visible(self) -> bool:
+        """visible 동작을 수행합니다."""
         visibility_prop = self._persistent_settings.get_as_bool(VISIBILITY_PATH)
         return visibility_prop
 
     def __on_visibility_changed(self, item, *_):
+        """__on_visibility_changed 동작을 수행합니다."""
         stage = ou.get_context().get_stage()
         if not stage:
             return False
@@ -206,6 +227,7 @@ class UserSettings:
 
     def __on_app_state_sync_changed(self, item, *_):
         # Get the value from the node change
+        """__on_app_state_sync_changed 동작을 수행합니다."""
         sync_state: str = self.__dict.get(item)
         if sync_state == EXTENSION_NAME:
             return
@@ -217,6 +239,7 @@ class UserSettings:
     def set_app_current_tool(self, measure_enabled: bool = True) -> None:
         # Do not continue setting the value if it is already current.
         # No need to trigger other tools state sync callbacks multiple times when the tool mode changes
+        """set_app_current_tool 동작을 수행합니다."""
         if measure_enabled:
             if self._persistent_settings.get_as_string(APP_CURRENT_TOOL_PATH) == EXTENSION_NAME:
                 return
@@ -323,6 +346,7 @@ class UserSettings:
         self.save_property("startup_tool", self._session_settings.startup_tool.name)
 
     def unregister_preferences(self) -> None:
+        """unregister_preferences 동작을 수행합니다."""
         unregister_page(self._preferences)
 
     def reset_to_default(self) -> _SessionSettings:

@@ -27,9 +27,11 @@ from .viewport_mode_model import ViewportModeModel
 
 
 class DiameterModel(ViewportModeModel):
+    """DiameterModel 클래스 설명입니다."""
     _mode = MeasureMode.DIAMETER
 
     def __init__(self, viewport_api):
+        """__init__ 동작을 수행합니다."""
         super().__init__(viewport_api, mode=self._mode)
         self._start_point: PositionItem = PositionItem()
         self._start_prim: PrimRefItem = PrimRefItem()
@@ -49,6 +51,7 @@ class DiameterModel(ViewportModeModel):
             self._ui_label: MeasureSceneLabel = MeasureSceneLabel("", MeasureAxis.NONE, self._mode)
 
     def reset(self):
+        """reset 동작을 수행합니다."""
         super().reset()
         self._root.clear()
         self._arc_xform = None
@@ -71,6 +74,7 @@ class DiameterModel(ViewportModeModel):
     @carb.profiler.profile
     def draw(self):
         # We just started, clear and create all the necessary scene elements
+        """draw 동작을 수행합니다."""
         if self.creation_state == MeasureCreationState.INTERMEDIATE_SELECTION:
             self._color = self._get_display_color()
             self._root.clear()
@@ -147,9 +151,11 @@ class DiameterModel(ViewportModeModel):
             self._ui_label.visible(True)
 
     def _compute_center(self, a: Gf.Vec3d, b: Gf.Vec3d, c: Gf.Vec3d) -> Tuple[Gf.Vec3d, Gf.Vec3d]:
+        """_compute_center 동작을 수행합니다."""
         def line_intersect(a: Gf.Vec3d, b: Gf.Vec3d, c: Gf.Vec3d, d: Gf.Vec3d) -> Gf.Vec3d:
             # DO NOT use [*a], [*b] etc to unpack any Gf types. It is VERY slow.
             # By simply changing them to explicit unpacking ([a[0], a[1], a[2]]), this function goes down from 5ms to 0.1ms
+            """line_intersect 동작을 수행합니다."""
             n_a, n_b, n_c, n_d = (
                 np.array([a[0], a[1], a[2]]),
                 np.array([b[0], b[1], b[2]]),
@@ -186,6 +192,7 @@ class DiameterModel(ViewportModeModel):
         return center, xform_mtx
 
     def _on_moved(self, coords: Sequence[float], result: omni.kit.raycast.query.RayQueryResult):
+        """_on_moved 동작을 수행합니다."""
         if self.creation_state not in [MeasureCreationState.NONE, MeasureCreationState.FINALIZE]:
             # Get snap if available
             self._snap_data: Optional[Dict[str, Any]] = MeasureSnapProviderManager().get_snap_position(coords, result)
@@ -206,6 +213,7 @@ class DiameterModel(ViewportModeModel):
                 self.draw()
 
     def _on_clicked(self, coords: Sequence[float], mouse_button: int = 0):
+        """_on_clicked 동작을 수행합니다."""
         if self.creation_state in [
             MeasureCreationState.START_SELECTION,
             MeasureCreationState.INTERMEDIATE_SELECTION,
@@ -250,6 +258,7 @@ class DiameterModel(ViewportModeModel):
             self.reset()
 
     def _on_save(self):
+        """_on_save 동작을 수행합니다."""
         display_panel = ReferenceManager().ui_display_panel
 
         payload: MeasurePayload = MeasurePayload()

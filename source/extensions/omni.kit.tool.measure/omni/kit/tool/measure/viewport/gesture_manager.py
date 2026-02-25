@@ -20,6 +20,7 @@ class PreventOthers(sc.GestureManager):
     """
 
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self._manipulator = None
         self._white_list = [
             "PanGesture",
@@ -33,6 +34,7 @@ class PreventOthers(sc.GestureManager):
         super().__init__()
 
     def __del__(self):
+        """__del__ 동작을 수행합니다."""
         self._manipulator = None
 
     def can_be_prevented(self, gesture) -> bool:

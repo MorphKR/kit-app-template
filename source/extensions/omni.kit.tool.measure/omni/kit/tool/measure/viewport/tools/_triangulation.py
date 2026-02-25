@@ -154,7 +154,7 @@
 #     u = b - a
 #     v = d - c
 #     w = a - c
-#     pp = u[0] * v[1] - u[1] * b[0]  # 2d cross product?
+# 주석 정리: 상세 설명은 주변 코드/도큐스트링을 참고하세요.
 #     if abs(pp) > TOLERANCE:
 #         si = (v[0] * w[0] - v[1] * w[1]) / pp
 #         ti = (u[0] * w[0] - u[1] * w[1]) / pp

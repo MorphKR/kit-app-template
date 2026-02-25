@@ -28,7 +28,9 @@ PADDING = 2
 
 
 class SnapMarker:
+    """SnapMarker 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self.__visible: bool = False
         self.__position: Gf.Vec3d = Gf.Vec3d(0, 0, 0)
 
@@ -40,10 +42,12 @@ class SnapMarker:
 
     @property
     def position(self) -> Gf.Vec3d:
+        """position 동작을 수행합니다."""
         return self.__position
 
     @position.setter
     def position(self, position: Optional[Gf.Vec3d]) -> None:
+        """position 동작을 수행합니다."""
         if not position:
             self.visible = False
             return
@@ -54,14 +58,17 @@ class SnapMarker:
 
     @property
     def visible(self) -> bool:
+        """visible 동작을 수행합니다."""
         return self.__visible
 
     @visible.setter
     def visible(self, value: bool) -> None:
+        """visible 동작을 수행합니다."""
         self.__visible = value
         self.__root.visible = value
 
     def _widget_build_fn(self) -> None:
+        """_widget_build_fn 동작을 수행합니다."""
         with self.__root:
             with sc.Transform(scale_to=sc.Space.SCREEN):
                 self.__icon = sc.Image(
@@ -89,6 +96,7 @@ class SnapMarker:
         self.visible = False
 
     def set_snap_marker(self, position: Optional[Gf.Vec3d], snap_type: SnapMode) -> None:
+        """set_snap_marker 동작을 수행합니다."""
         self.__label.text = snap_type.name
         self.__label_bg.width = 12 * len(self.__label.text) + PADDING
         x_pos = SNAP_SIZE / 2 + self.__label_bg.width / 2 - PADDING
@@ -98,6 +106,7 @@ class SnapMarker:
 
 # TODO Add gesture to background with callback, otherwise dummy gesture to block others on the screen.
 class MeasureSceneLabel:
+    """MeasureSceneLabel 클래스 설명입니다."""
     def __init__(
         self,
         text: str,
@@ -107,6 +116,7 @@ class MeasureSceneLabel:
         clicked_fn: Optional[Callable[[], None]] = None,
         visible: bool = False,
     ):
+        """__init__ 동작을 수행합니다."""
         self._axis: MeasureAxis = axis
         self._mode: MeasureMode = tool_mode
         self._clicked_fn: Optional[Callable[[], None]] = clicked_fn
@@ -124,6 +134,7 @@ class MeasureSceneLabel:
         self.visible(visible)
 
     def __draw(self):
+        """__draw 동작을 수행합니다."""
         label_color = 0xFF000000
         if self._axis == MeasureAxis.X:
             label_color = 0xFF5555AA
@@ -161,15 +172,18 @@ class MeasureSceneLabel:
 
     @property
     def text(self) -> str:
+        """text 동작을 수행합니다."""
         return self._label.text
 
     @text.setter
     def text(self, value: str) -> None:
+        """text 동작을 수행합니다."""
         self._label.text = value
         self.__update_label_visuals()
 
     def __update_label_visuals(self):
         # Update label size
+        """__update_label_visuals 동작을 수행합니다."""
         text_size = ReferenceManager().ui_display_panel.text_size
         self._label.size = text_size.value
         size_bias = LABEL_SCALE_MAPPING[text_size]
@@ -226,11 +240,13 @@ class MeasureSceneLabel:
             self.visible(_visible)
 
     def _on_click(self) -> None:
+        """_on_click 동작을 수행합니다."""
         if self._clicked_fn:
             self._clicked_fn()
 
 
 class MeasureAxisStackLabel:
+    """MeasureAxisStackLabel 클래스 설명입니다."""
     def __init__(
         self,
         tool_mode: MeasureMode,
@@ -241,6 +257,7 @@ class MeasureAxisStackLabel:
         selected: bool = False,
         visible: bool = False,
     ):
+        """__init__ 동작을 수행합니다."""
         self._mode: MeasureMode = tool_mode
         self._clicked_fn: Optional[Callable[[], None]] = clicked_fn
         self._delete_fn: Optional[Callable] = delete_fn
@@ -266,27 +283,33 @@ class MeasureAxisStackLabel:
 
     @property
     def selected(self) -> bool:
+        """selected 동작을 수행합니다."""
         return self._selected
 
     @selected.setter
     def selected(self, value: bool) -> None:
+        """selected 동작을 수행합니다."""
         self._selected = value
 
     def _on_delete(self):
+        """_on_delete 동작을 수행합니다."""
         if self._delete_fn is not None and self.selected:
             self._delete_fn()
 
     def _on_hover_start(self, _sender):
+        """_on_hover_start 동작을 수행합니다."""
         if ReferenceManager().selection_state.enabled:
             return
         self._hovered = True
         get_main_window_cursor().override_cursor_shape(CursorStandardShape.HAND)
 
     def _on_hover_end(self, _sender):
+        """_on_hover_end 동작을 수행합니다."""
         self._hovered = False
         get_main_window_cursor().clear_overridden_cursor_shape()
 
     def __draw_icon(self, axis: MeasureAxis, add_delete: bool = False) -> sc.Transform:
+        """__draw_icon 동작을 수행합니다."""
         label_color = 0x00000000
         if axis == MeasureAxis.X:
             label_color = 0xFF5555AA
@@ -316,6 +339,7 @@ class MeasureAxisStackLabel:
 
     def __draw(self):
         # Get Local Transform Offset position [Defaults]
+        """__draw 동작을 수행합니다."""
         m_pos = sc.Matrix44.get_translation_matrix(0, 67.5, 0)
         x_pos = sc.Matrix44.get_translation_matrix(0, 22.5, 0)
         y_pos = sc.Matrix44.get_translation_matrix(0, -22.5, 0)
@@ -359,13 +383,16 @@ class MeasureAxisStackLabel:
 
     @property
     def visible(self) -> bool:
+        """visible 동작을 수행합니다."""
         return self._root.visible
 
     @visible.setter
     def visible(self, value: bool) -> None:
+        """visible 동작을 수행합니다."""
         self._root.visible = value
 
     def __update_label_visuals(self):
+        """__update_label_visuals 동작을 수행합니다."""
         m_len = len(self._m_label.text)
         x_len = len(self._x_label.text)
         y_len = len(self._y_label.text)
@@ -426,5 +453,6 @@ class MeasureAxisStackLabel:
         self.__update_label_visuals()
 
     def _on_click(self) -> None:
+        """_on_click 동작을 수행합니다."""
         if self._clicked_fn:
             self._clicked_fn()

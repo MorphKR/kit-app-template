@@ -24,9 +24,11 @@ from .viewport_mode_model import ViewportModeModel
 
 
 class MultiPointModel(ViewportModeModel):
+    """MultiPointModel 클래스 설명입니다."""
     _mode = MeasureMode.MULTI_POINT
 
     def __init__(self, viewport_api):
+        """__init__ 동작을 수행합니다."""
         super().__init__(viewport_api, mode=self._mode)
         self._points: MultiPositionItem = MultiPositionItem(changed_fn=self._on_points_changed)
         self._prim_paths: List[str] = []
@@ -38,6 +40,7 @@ class MultiPointModel(ViewportModeModel):
             self._sub_label_root = sc.Transform()
 
     def reset(self):
+        """reset 동작을 수행합니다."""
         super().reset()
         self._root.clear()
         self._points.reset()
@@ -50,6 +53,7 @@ class MultiPointModel(ViewportModeModel):
         self.creation_state = MeasureCreationState.START_SELECTION
 
     def draw(self):
+        """draw 동작을 수행합니다."""
         self._color = self._get_display_color()
         points: List[List[float]] = self._points.value
         pt_len = len(points)
@@ -74,6 +78,7 @@ class MultiPointModel(ViewportModeModel):
                         self._draw_sub_label(points[i], points[j])
 
     def _draw_sub_label(self, start, end) -> sc.Transform:
+        """_draw_sub_label 동작을 수행합니다."""
         distance = (Gf.Vec3d(start) - Gf.Vec3d(end)).GetLength()
         label_position = (Gf.Vec3d(start) + Gf.Vec3d(end)) * 0.5
 
@@ -98,6 +103,7 @@ class MultiPointModel(ViewportModeModel):
         return xform
 
     def _calculate_length_sum(self) -> float:
+        """_calculate_length_sum 동작을 수행합니다."""
         points: List[Gf.Vec3d] = self._points.vectors
         pt_len = len(points)
 
@@ -110,6 +116,7 @@ class MultiPointModel(ViewportModeModel):
         return pt_sum
 
     def _update_scene_label(self):
+        """_update_scene_label 동작을 수행합니다."""
         if self.creation_state not in [MeasureCreationState.INTERMEDIATE_SELECTION, MeasureCreationState.END_SELECTION]:
             return
         # Find the centroid of the points
@@ -127,6 +134,7 @@ class MultiPointModel(ViewportModeModel):
         self._ui_scene_label.visible(True)
 
     def _on_points_changed(self):
+        """_on_points_changed 동작을 수행합니다."""
         if self.creation_state not in [MeasureCreationState.INTERMEDIATE_SELECTION, MeasureCreationState.END_SELECTION]:
             return
         self.draw()
@@ -134,6 +142,7 @@ class MultiPointModel(ViewportModeModel):
 
     # Input Handling
     def _on_moved(self, coords: Sequence[float], result: omni.kit.raycast.query.RayQueryResult):
+        """_on_moved 동작을 수행합니다."""
         if self.creation_state in [
             MeasureCreationState.START_SELECTION,
             MeasureCreationState.INTERMEDIATE_SELECTION,
@@ -154,6 +163,7 @@ class MultiPointModel(ViewportModeModel):
                 self._points.update(snap_position, self._points.length - 1)
 
     def _on_clicked(self, coords: Sequence[float], mouse_button: int = 0):
+        """_on_clicked 동작을 수행합니다."""
         if self.creation_state in [
             MeasureCreationState.START_SELECTION,
             MeasureCreationState.INTERMEDIATE_SELECTION,
@@ -200,6 +210,7 @@ class MultiPointModel(ViewportModeModel):
             self.reset()
 
     def _on_save(self):
+        """_on_save 동작을 수행합니다."""
         display_panel = ReferenceManager().ui_display_panel
 
         payload: MeasurePayload = MeasurePayload()
@@ -213,6 +224,7 @@ class MultiPointModel(ViewportModeModel):
         MeasurementManager().create(payload)
 
     def _try_auto_complete_and_save(self):
+        """_try_auto_complete_and_save 동작을 수행합니다."""
         if self.creation_state == MeasureCreationState.END_SELECTION:
             self._points.remove(self._points.length - 1)
             self._set_snap_marker_position(None)

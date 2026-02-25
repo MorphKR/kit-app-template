@@ -28,6 +28,8 @@ from .provider import MeshBasedSnapProvider
 
 
 class CenterSnapProvider(MeshBasedSnapProvider):
+    """현재 hit prim의 월드 중심(변환 행렬의 translation)으로 스냅한다."""
+
     def on_snap(
         self,
         ndc_location: Sequence[float],
@@ -36,6 +38,7 @@ class CenterSnapProvider(MeshBasedSnapProvider):
         want_keep_spacing: bool = True,
         conform_up_axis: str = "Stage",
     ) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        """Center 스냅 payload를 계산해 반환한다."""
         prim_path = result.get_target_usd_path()
         stage = self._viewport_api.usd_context.get_stage()
         prim = stage.GetPrimAtPath(prim_path)
@@ -73,22 +76,28 @@ class CenterSnapProvider(MeshBasedSnapProvider):
 
     @staticmethod
     def get_name() -> str:
+        """내부 등록 이름."""
         return "CenterSnapProvider"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """UI 표시 이름."""
         return "Center"
 
     @staticmethod
     def can_orient() -> bool:
+        """Center 스냅은 회전 정보 제공 가능."""
         return True
 
     @staticmethod
     def get_order() -> float:
+        """provider 우선순위(작을수록 우선)."""
         return -1.0
 
 
 class PivotSnapProvider(MeshBasedSnapProvider):
+    """xform pivot 위치를 계산해 스냅한다."""
+
     def on_snap(
         self,
         ndc_location: Sequence[float],
@@ -97,6 +106,7 @@ class PivotSnapProvider(MeshBasedSnapProvider):
         want_keep_spacing: bool = True,
         conform_up_axis: str = "Stage",
     ) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        """Pivot 스냅 payload를 계산해 반환한다."""
         prim_path = result.get_target_usd_path()
         stage = self._viewport_api.usd_context.get_stage()
         prim = stage.GetPrimAtPath(prim_path)
@@ -141,6 +151,7 @@ class PivotSnapProvider(MeshBasedSnapProvider):
         return (False, None)
 
     def _get_local_transform_pivot_inv(self, prim: Usd.Prim, time: Usd.TimeCode = Usd.TimeCode):
+        """inverse pivot xformOp를 찾아 그 변환 행렬을 반환한다. 없으면 단위 행렬."""
         xform = UsdGeom.Xformable(prim)
         xform_ops = xform.GetOrderedXformOps()
         if len(xform_ops):
@@ -155,22 +166,28 @@ class PivotSnapProvider(MeshBasedSnapProvider):
 
     @staticmethod
     def get_name() -> str:
+        """내부 등록 이름."""
         return "PivotSnapProvider"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """UI 표시 이름."""
         return "Pivot"
 
     @staticmethod
     def can_orient() -> bool:
+        """Pivot 스냅은 회전 정보 제공 가능."""
         return True
 
     @staticmethod
     def get_order() -> float:
+        """provider 우선순위(작을수록 우선)."""
         return -1.0
 
 
 class SurfaceSnapProvider(MeshBasedSnapProvider):
+    """레이캐스트 hit 위치/노멀 기반 Surface 스냅을 제공한다."""
+
     def on_snap(
         self,
         ndc_location: Sequence[float],
@@ -179,6 +196,10 @@ class SurfaceSnapProvider(MeshBasedSnapProvider):
         want_keep_spacing: bool = True,
         conform_up_axis: str = "Stage",
     ) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        """
+        Surface 스냅 payload를 계산해 반환한다.
+        옵션에 따라 hit normal 기준의 회전(orient)도 함께 계산한다.
+        """
         prim_path = result.get_target_usd_path()
 
         payload = {}
@@ -197,6 +218,7 @@ class SurfaceSnapProvider(MeshBasedSnapProvider):
                 conform_up_axis = "Y" if stage_up_axis == UsdGeom.Tokens.y else "Z"
 
             def calculate_orientation(stage_up: Gf.Vec3d, stage_side: Gf.Vec3d):
+                """선택한 업축(conform_up_axis)에 맞춰 직교 기저(x,y,z)를 계산한다."""
                 if conform_up_axis == "X":
                     x = normal.GetNormalized()
                     z = Gf.Cross(stage_up, x)
@@ -239,22 +261,28 @@ class SurfaceSnapProvider(MeshBasedSnapProvider):
 
     @staticmethod
     def get_name() -> str:
+        """내부 등록 이름."""
         return "SurfaceSnapProvider"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """UI 표시 이름."""
         return "Surface"
 
     @staticmethod
     def can_orient() -> bool:
+        """Surface 스냅은 회전 정보 제공 가능."""
         return True
 
     @staticmethod
     def get_order() -> float:
+        """provider 우선순위(작을수록 우선)."""
         return 0.0
 
 
 class EdgeSnapProvider(MeshBasedSnapProvider):
+    """hit face의 에지 중 hit point에 가장 가까운 점으로 스냅한다."""
+
     def on_snap(
         self,
         ndc_location: Sequence[float],
@@ -263,6 +291,7 @@ class EdgeSnapProvider(MeshBasedSnapProvider):
         want_keep_spacing: bool = True,
         conform_up_axis: str = "Stage",
     ) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        """Edge 스냅 payload를 계산해 반환한다."""
         nearest_position = None
         nearest_sqdistance = None
         hit_point = Gf.Vec3d(result.hit_position[0], result.hit_position[1], result.hit_position[2])
@@ -298,22 +327,28 @@ class EdgeSnapProvider(MeshBasedSnapProvider):
 
     @staticmethod
     def get_name() -> str:
+        """내부 등록 이름."""
         return "EdgeSnapProvider"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """UI 표시 이름."""
         return "Edge"
 
     @staticmethod
     def can_orient() -> bool:
+        """Edge 스냅은 위치만 제공한다."""
         return False
 
     @staticmethod
     def get_order() -> float:
+        """provider 우선순위(작을수록 우선)."""
         return -3.0
 
 
 class MidPointSnapProvider(MeshBasedSnapProvider):
+    """hit face 에지의 중점(midpoint)으로 스냅한다."""
+
     def on_snap(
         self,
         ndc_location: Sequence[float],
@@ -322,6 +357,7 @@ class MidPointSnapProvider(MeshBasedSnapProvider):
         want_keep_spacing: bool = True,
         conform_up_axis: str = "Stage",
     ) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        """Midpoint 스냅 payload를 계산해 반환한다."""
         nearest_position = None
         nearest_sqdistance = None
         hit_point = Gf.Vec3d(result.hit_position[0], result.hit_position[1], result.hit_position[2])
@@ -358,22 +394,28 @@ class MidPointSnapProvider(MeshBasedSnapProvider):
 
     @staticmethod
     def get_name() -> str:
+        """내부 등록 이름."""
         return "MidPointSnapProvider"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """UI 표시 이름."""
         return "Midpoint"
 
     @staticmethod
     def can_orient() -> bool:
+        """Midpoint 스냅은 위치만 제공한다."""
         return False
 
     @staticmethod
     def get_order() -> float:
+        """provider 우선순위(작을수록 우선)."""
         return -3.0
 
 
 class VertexSnapProvider(MeshBasedSnapProvider):
+    """hit face 정점 중 hit point에 가장 가까운 정점으로 스냅한다."""
+
     @carb.profiler.profile
     def on_snap(
         self,
@@ -382,6 +424,7 @@ class VertexSnapProvider(MeshBasedSnapProvider):
         want_orient: bool = False,
         want_keep_spacing: bool = True,
     ) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        """Vertex 스냅 payload를 계산해 반환한다."""
         nearest_position = None
         nearest_sqdistance = None
         hit_point = Gf.Vec3d(result.hit_position[0], result.hit_position[1], result.hit_position[2])
@@ -406,16 +449,20 @@ class VertexSnapProvider(MeshBasedSnapProvider):
 
     @staticmethod
     def get_name() -> str:
+        """내부 등록 이름."""
         return "VertexSnapProvider"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """UI 표시 이름."""
         return "Vertex"
 
     @staticmethod
     def can_orient() -> bool:
+        """Vertex 스냅은 위치만 제공한다."""
         return False
 
     @staticmethod
     def get_order() -> float:
+        """provider 우선순위(작을수록 우선)."""
         return -4.0

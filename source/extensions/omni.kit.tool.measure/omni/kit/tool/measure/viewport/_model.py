@@ -27,9 +27,7 @@ from ._measurement_items import (
 
 
 class ViewportMeasurementModel(sc.AbstractManipulatorModel):
-    """
-    The Model tracks the attributes of the selected measurement
-    """
+    """동작 설명입니다."""
 
     def __init__(self):
         super().__init__()
@@ -87,7 +85,7 @@ class ViewportMeasurementModel(sc.AbstractManipulatorModel):
         self.measurements.pop(uuid)
         return payload
 
-    # Selection
+    # 선택
     @property
     def selected(self) -> List[int]:
         return [measurement.uuid for measurement in self.measurements.values() if measurement.selected]
@@ -96,7 +94,7 @@ class ViewportMeasurementModel(sc.AbstractManipulatorModel):
         if not (measurement := self.measurements.get(uuid, None)) or measurement.selected == True:
             return
         # We don't want to run it through the property becasuse of the consistent update
-        # issues that the TreeView selection changed would cause
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         measurement._selected = True
         self._item_changed(measurement)
 

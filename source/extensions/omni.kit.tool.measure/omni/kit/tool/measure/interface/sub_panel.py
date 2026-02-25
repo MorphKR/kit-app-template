@@ -43,7 +43,9 @@ from .style import *
 
 class SubPanelBase(metaclass=ABCMeta):
 
+    """SubPanelBase 클래스 설명입니다."""
     def __init__(self, panel_name: str):
+        """__init__ 동작을 수행합니다."""
         self._ctx = ou.get_context()
         self._name: str = panel_name
         self._root: Union[ui.Stack, ui.CollapsableFrame] = self._draw()
@@ -51,10 +53,12 @@ class SubPanelBase(metaclass=ABCMeta):
 
     @property
     def visible(self) -> bool:
+        """visible 동작을 수행합니다."""
         return self._root.visible
 
     @visible.setter
     def visible(self, value: bool) -> None:
+        """visible 동작을 수행합니다."""
         self._root.visible = value
 
     @abstractmethod
@@ -73,7 +77,9 @@ class SubPanelBase(metaclass=ABCMeta):
 
 
 class GlobalPanel(SubPanelBase):
+    """GlobalPanel 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self._measure_selected_fn: List[Callable] = []
         self._mesh_button: Optional[ToolButton] = None  # MESH 버튼 참조 저장
         super().__init__("Global")
@@ -88,6 +94,7 @@ class GlobalPanel(SubPanelBase):
 
     @property
     def distance(self) -> DistanceType:
+        """distance 동작을 수행합니다."""
         if not self._cb_distance:
             return DistanceType.CENTER
         model = self._cb_distance.model
@@ -95,6 +102,7 @@ class GlobalPanel(SubPanelBase):
         return DistanceType(value)
 
     def _draw(self) -> ui.Stack:
+        """_draw 동작을 수행합니다."""
         _stack = ui.VStack(spacing=6)
 
         with _stack:
@@ -143,21 +151,26 @@ class GlobalPanel(SubPanelBase):
         return _stack
 
     def add_measure_selected_fn(self, function: Callable):
+        """add_measure_selected_fn 동작을 수행합니다."""
         self._measure_selected_fn.append(function)
 
     def set_distance_type(self, distance_type: DistanceType):
+        """set_distance_type 동작을 수행합니다."""
         d_to_int = list(DistanceType).index(distance_type)
         self._cb_distance.model.get_item_value_model().as_int = d_to_int
 
     def _set_defaults(self) -> None:
+        """_set_defaults 동작을 수행합니다."""
         pass
 
     def _on_measure_selected(self, mode: Optional[MeasureMode] = None) -> None:
+        """_on_measure_selected 동작을 수행합니다."""
         for fn in self._measure_selected_fn:
             fn()
         StateMachine().reset_state_to_default()
 
     def _on_distance_changed(self, model: ui.AbstractItemModel, item: ui.AbstractItem) -> None:
+        """_on_distance_changed 동작을 수행합니다."""
         UserSettings().session.distance = model.get_item_value_model(item).get_value_as_int()
 
     # ------ Listeners / Notifiers ------
@@ -236,6 +249,7 @@ class MeshPanel(SubPanelBase):
     """
 
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self._mesh_measure_btn: Optional[ui.Button] = None
         super().__init__("Mesh")
 
@@ -244,6 +258,7 @@ class MeshPanel(SubPanelBase):
         )
 
     def _draw(self) -> ui.CollapsableFrame:
+        """_draw 동작을 수행합니다."""
         _frame = ui.CollapsableFrame(self._name, name="frame", style=STYLE_DISPLAY_PANEL, identifier="MeshPanel")
         with _frame:
             with ui.VStack(spacing=8):
@@ -256,6 +271,7 @@ class MeshPanel(SubPanelBase):
         return _frame
 
     def _set_defaults(self) -> None:
+        """_set_defaults 동작을 수행합니다."""
         pass
 
     def __on_selection_changed(self) -> None:
@@ -277,9 +293,11 @@ class MeshPanel(SubPanelBase):
         self._mesh_measure_btn.enabled = has_mesh
 
     def _on_mesh_measure_clicked(self) -> None:
+        """_on_mesh_measure_clicked 동작을 수행합니다."""
         run_mesh_bbox_measurement_for_selection()
 
     def _has_mesh_prim(self, prim) -> bool:
+        """_has_mesh_prim 동작을 수행합니다."""
         if prim.IsA(UsdGeom.Camera):
             return False
         if prim.IsA(UsdGeom.Mesh):
@@ -291,7 +309,9 @@ class MeshPanel(SubPanelBase):
 
 
 class PlacementPanel(SubPanelBase):
+    """PlacementPanel 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self._snap_state = {SnapTo.CUSTOM: [SnapMode.VERTEX], SnapTo.PERPENDICULAR: [SnapMode.SURFACE]}
 
         self._snap_group: Optional[SnapGroupBox] = None
@@ -304,6 +324,7 @@ class PlacementPanel(SubPanelBase):
 
     @property
     def snap_to(self) -> SnapTo:
+        """snap_to 동작을 수행합니다."""
         if not self._cb_snap_selection_mode:
             return SnapTo.CUSTOM
         model = self._cb_snap_selection_mode.model
@@ -312,16 +333,19 @@ class PlacementPanel(SubPanelBase):
 
     @property
     def snap_group(self) -> Optional[SnapGroupBox]:
+        """snap_group 동작을 수행합니다."""
         return self._snap_group
 
     @property
     def snap_mode(self) -> List[SnapMode]:
+        """snap_mode 동작을 수행합니다."""
         if not self._snap_group:
             return [SnapMode.NONE]
         return self._snap_group.snaps
 
     @property
     def constrain_mode(self) -> ConstrainAxis:
+        """constrain_mode 동작을 수행합니다."""
         if not self._constrain_combo:
             return ConstrainAxis.STAGE_UP
 
@@ -330,6 +354,7 @@ class PlacementPanel(SubPanelBase):
         return ConstrainAxis(index)
 
     def _draw(self) -> ui.CollapsableFrame:
+        """_draw 동작을 수행합니다."""
         _frame = ui.CollapsableFrame(self._name, name="frame", style=STYLE_PLACEMENT_PANEL)
 
         with _frame:
@@ -404,17 +429,21 @@ class PlacementPanel(SubPanelBase):
         return _frame
 
     def lock_properties(self, lock: bool) -> None:
+        """lock_properties 동작을 수행합니다."""
         snap_selection_lock = StateMachine().tool_mode == MeasureMode.POINT_TO_POINT
         self._cb_snap_selection_mode.enabled = not lock if snap_selection_lock else False
 
     def _set_defaults(self) -> None:
+        """_set_defaults 동작을 수행합니다."""
         return super()._set_defaults()
 
     def _on_constrain_axis_changed(self, model: ui.AbstractItemModel, item: ui.AbstractItem) -> None:
+        """_on_constrain_axis_changed 동작을 수행합니다."""
         index = model.get_item_value_model().as_int
         UserSettings().session.constrain_axis = index
 
     def _on_snap_selection_mode_changed(self, model: ui.AbstractItemModel, item: ui.AbstractItem) -> None:
+        """_on_snap_selection_mode_changed 동작을 수행합니다."""
         self._snap_state[SnapTo(UserSettings().session.snapping_mode)] = self._snap_group.snaps
 
         index = model.get_item_value_model().as_int
@@ -425,30 +454,35 @@ class PlacementPanel(SubPanelBase):
         UserSettings().session.snapping_mode = index
 
     def _on_snap_selection_mode_reset(self, value: int):
+        """_on_snap_selection_mode_reset 동작을 수행합니다."""
         if not self._cb_snap_selection_mode:
             return
         model = self._cb_snap_selection_mode.model
         model.get_item_value_model().set_value(value)
 
     def _on_precision_reset(self, value: float) -> None:
+        """_on_precision_reset 동작을 수행합니다."""
         if not self._precision_float:
             return
         model = self._precision_float.model
         model.as_float = value
 
     def _on_constraint_reset(self, value: int) -> None:
+        """_on_constraint_reset 동작을 수행합니다."""
         if not self._constrain_combo:
             return
         model = self._constrain_combo.model
         model.get_item_value_model().set_value(value)
 
     def _on_cull_reset(self, value: bool) -> None:
+        """_on_cull_reset 동작을 수행합니다."""
         if not self._cull_chk:
             return
         model = self._cull_chk.model
         model.set_value(value)
 
     def _on_tool_state_changed(self, state: MeasureState, mode: MeasureMode) -> None:
+        """_on_tool_state_changed 동작을 수행합니다."""
         if mode != MeasureMode.POINT_TO_POINT:
             self._cb_snap_selection_mode.model.get_item_value_model().as_int = 0
             self._cb_snap_selection_mode.enabled = False
@@ -459,7 +493,9 @@ class PlacementPanel(SubPanelBase):
 
 
 class DisplayPanel(SubPanelBase):
+    """DisplayPanel 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         super().__init__("Display")
 
         StateMachine().add_tool_state_changed_fn(self._on_tool_state_changed)
@@ -469,12 +505,14 @@ class DisplayPanel(SubPanelBase):
 
     @property
     def display_axis(self) -> DisplayAxisSpace:
+        """display_axis 동작을 수행합니다."""
         model = self._cb_display_axis.model
         index = model.get_item_value_model().as_int
         return DisplayAxisSpace(index)
 
     @property
     def precision(self) -> Precision:
+        """precision 동작을 수행합니다."""
         if not self._precision_combo:
             return Precision.INTEGER
         model = self._precision_combo.model
@@ -485,6 +523,7 @@ class DisplayPanel(SubPanelBase):
 
     @property
     def unit(self) -> UnitType:
+        """unit 동작을 수행합니다."""
         if not self._cb_units:
             return UnitType.CENTIMETERS
         model = self._cb_units.model
@@ -495,6 +534,7 @@ class DisplayPanel(SubPanelBase):
 
     @property
     def precision_int(self) -> int:
+        """precision_int 동작을 수행합니다."""
         if not self._precision_combo:
             return 0
         model = self._precision_combo.model
@@ -502,6 +542,7 @@ class DisplayPanel(SubPanelBase):
 
     @property
     def color(self) -> Gf.Vec4f:
+        """color 동작을 수행합니다."""
         if not self._color_widget:
             return Gf.Vec4f(0.0, 1.0, 1.0, 1.0)
         model = self._color_widget.model
@@ -511,6 +552,7 @@ class DisplayPanel(SubPanelBase):
 
     @property
     def text_size(self) -> LabelSize:
+        """text_size 동작을 수행합니다."""
         if not self._size_combo:
             return LabelSize.MEDIUM
         model = self._size_combo.model
@@ -520,6 +562,7 @@ class DisplayPanel(SubPanelBase):
         return LabelSize[size]
 
     def _draw(self) -> ui.CollapsableFrame:
+        """_draw 동작을 수행합니다."""
         _frame = ui.CollapsableFrame(self._name, name="frame", style=STYLE_DISPLAY_PANEL, identifier="DisplayPanal")
 
         with _frame:
@@ -636,6 +679,7 @@ class DisplayPanel(SubPanelBase):
         return _frame
 
     def lock_properties(self, lock: bool) -> None:
+        """lock_properties 동작을 수행합니다."""
         axis_lock = StateMachine().tool_mode in [MeasureMode.NONE, MeasureMode.POINT_TO_POINT]
         self._cb_display_axis.enabled = not lock if axis_lock else False
         self._cb_units.enabled = not lock
@@ -644,32 +688,41 @@ class DisplayPanel(SubPanelBase):
         self._color_widget.enabled = not lock
 
     def _set_defaults(self) -> None:
+        """_set_defaults 동작을 수행합니다."""
         return super()._set_defaults()
 
     def __on_precision_changed(self, model: ui.AbstractItemModel, item: ui.AbstractItem) -> None:
+        """__on_precision_changed 동작을 수행합니다."""
         UserSettings().session.label_precision = model.get_item_value_model(item).get_value_as_int()
 
     def _on_units_changed(self, model: ui.AbstractItemModel, item: ui.AbstractItem) -> None:
+        """_on_units_changed 동작을 수행합니다."""
         UserSettings().session.units = model.get_item_value_model(item).get_value_as_int()
 
     def _on_display_axis_changed(self, model: ui.AbstractItemModel, item: ui.AbstractItem) -> None:
+        """_on_display_axis_changed 동작을 수행합니다."""
         UserSettings().session.display_axis = model.get_item_value_model(item).get_value_as_int()
 
     def _on_display_axis_reset(self, value: int):
+        """_on_display_axis_reset 동작을 수행합니다."""
         model = self._cb_display_axis.model
         model.get_item_value_model().set_value(value)
 
     def _on_name_visibility_changed(self, model: ui.AbstractValueModel) -> None:
+        """_on_name_visibility_changed 동작을 수행합니다."""
         value = model.as_bool
 
     def _on_color_updated(self, model: ui.AbstractItemModel, item: ui.AbstractItem) -> None:
+        """_on_color_updated 동작을 수행합니다."""
         value = [model.get_item_value_model(i).as_float for i in model.get_item_children()]
         UserSettings().session.set_color_rgba(value)
 
     def _on_label_size_changed(self, model: ui.AbstractItemModel, item: ui.AbstractItem):
+        """_on_label_size_changed 동작을 수행합니다."""
         UserSettings().session.label_size = model.get_item_value_model(item).get_value_as_int()
 
     def _on_precision_reset(self, value: int) -> None:
+        """_on_precision_reset 동작을 수행합니다."""
         if not self._precision_combo:
             return
         model = self._precision_combo.model
@@ -677,16 +730,19 @@ class DisplayPanel(SubPanelBase):
 
     def _on_units_reset(self, value: int) -> None:
         # Reset the units to the scene's default.
+        """_on_units_reset 동작을 수행합니다."""
         model = self._cb_units.model
         model.get_item_value_model().set_value(UserSettings().default_session.units)
 
     def _on_size_reset(self, value: int) -> None:
+        """_on_size_reset 동작을 수행합니다."""
         if not self._size_combo:
             return
         model = self._size_combo.model
         model.get_item_value_model().set_value(value)
 
     def _on_color_reset(self, value: List[Union[int, float]]) -> None:
+        """_on_color_reset 동작을 수행합니다."""
         model = self._color_widget.model
         sub_models = model.get_item_children()
         model.get_item_value_model(sub_models[0]).as_float = value[0]
@@ -696,6 +752,7 @@ class DisplayPanel(SubPanelBase):
         self._color_reset_btn.visible = False
 
     def _on_tool_state_changed(self, state: MeasureState, mode: MeasureMode):
+        """_on_tool_state_changed 동작을 수행합니다."""
         axis_lock: bool = mode in [MeasureMode.NONE, MeasureMode.POINT_TO_POINT]
 
         display_axis = self._cb_display_axis
@@ -710,7 +767,9 @@ class DisplayPanel(SubPanelBase):
 
 
 class ManagePanel(SubPanelBase):
+    """ManagePanel 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self.__query_model = ui.SimpleStringModel()
         self.__query_sub = self.__query_model.add_value_changed_fn(self._on_search_changed)
 
@@ -728,17 +787,20 @@ class ManagePanel(SubPanelBase):
         ReferenceManager().ui_manage_panel = self
 
     def __on_stage_selection_changed(self):
+        """__on_stage_selection_changed 동작을 수행합니다."""
         selection = ou.get_context().get_selection()
         if len(selection.get_selected_prim_paths()) == 0:
             self._measurement_view.clear_selection()
             ReferenceManager().measure_scene.deselect_all()
 
     def _on_search_changed(self, model) -> None:
+        """_on_search_changed 동작을 수행합니다."""
         query = model.as_string
         self._search_overlay.visible = len(query) == 0
         MeasurementManager()._model.set_search(query)
 
     def _on_tree_selection_changed(self, items) -> None:
+        """_on_tree_selection_changed 동작을 수행합니다."""
         selected_paths = [str(item.path) for item in items]
 
         ReferenceManager().measure_scene.deselect_all()
@@ -749,6 +811,7 @@ class ManagePanel(SubPanelBase):
         selection.set_selected_prim_paths(selected_paths, True)
 
     def _on_tree_hover_changed(self, item: "MeasurePrim", hovered: bool) -> None:
+        """_on_tree_hover_changed 동작을 수행합니다."""
         if not hasattr(item, "uuid"):
             return
         if not item.visible:
@@ -757,30 +820,36 @@ class ManagePanel(SubPanelBase):
         ReferenceManager().measure_scene.set_hovered(item.uuid, hovered)
 
     def _on_filter_reset(self) -> None:
+        """_on_filter_reset 동작을 수행합니다."""
         MeasurementManager()._model.reset_filters()
         for item in self.__filter_items:
             if item.checked:
                 item.checked = False
 
     def _on_filter_by(self, mode: MeasureMode, enabled: bool) -> None:
+        """_on_filter_by 동작을 수행합니다."""
         MeasurementManager()._model.set_filter_type(mode, enabled)
 
     def _on_export_csv(self):
+        """_on_export_csv 동작을 수행합니다."""
         self._export_window.visible = True
 
     def _on_hide_all(self):
+        """_on_hide_all 동작을 수행합니다."""
         MeasurementManager().set_visibility_all(False)
         # UserSettings().persistent.set_bool(VISIBILITY_PATH, False)
         for uuid, item in self._delegate.items:
             item.visibility_btn.checked = True
 
     def _on_unhide_all(self):
+        """_on_unhide_all 동작을 수행합니다."""
         MeasurementManager().set_visibility_all(True)
         # UserSettings().persistent.set_bool(VISIBILITY_PATH, True)
         for uuid, item in self._delegate.items:
             item.visibility_btn.checked = False
 
     def _draw_menu(self):
+        """_draw_menu 동작을 수행합니다."""
         with ui.Frame():
             # Filter Menu
             self._filter_menu = ui.Menu("Filter")
@@ -825,6 +894,7 @@ class ManagePanel(SubPanelBase):
             ui.Spacer(width=0, height=0)  # to bump off options menu
 
     def _draw(self) -> ui.CollapsableFrame:
+        """_draw 동작을 수행합니다."""
         self._draw_menu()
         _frame = ui.CollapsableFrame(self._name, name="frame", identifier="ManagePanel", style=STYLE_DISPLAY_PANEL)
 
@@ -885,7 +955,9 @@ class ManagePanel(SubPanelBase):
         return _frame
 
     def _set_defaults(self) -> None:
+        """_set_defaults 동작을 수행합니다."""
         return super()._set_defaults()
 
     def update_selection(self):
+        """update_selection 동작을 수행합니다."""
         self._measurement_view.selection = MeasurementManager().selected

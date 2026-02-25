@@ -30,7 +30,9 @@ from ..common import DisplayAxisSpace, LabelSize, Precision, UnitType
 
 
 class MeasurementPropertyWidget(UsdPropertiesWidget):
+    """MeasurementPropertyWidget 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         super().__init__(title="Measurement", collapsed=False)
 
     def on_new_payload(self, payload) -> bool:
@@ -50,6 +52,7 @@ class MeasurementPropertyWidget(UsdPropertiesWidget):
         return True
 
     def _customize_props_layout(self, props):
+        """_customize_props_layout 동작을 수행합니다."""
         props.append(
             UsdPropertyUiEntry("measure:prop:axis_display", "", {Sdf.PrimSpec.TypeNameKey: "string"}, Usd.Attribute)
         )
@@ -90,6 +93,7 @@ class MeasurementPropertyWidget(UsdPropertiesWidget):
         additional_label_kwargs={},
         additional_widget_kwargs={},
     ):
+        """_build_axis_fn 동작을 수행합니다."""
         if not attr_name or not property_type:
             return
 
@@ -136,6 +140,7 @@ class MeasurementPropertyWidget(UsdPropertiesWidget):
         additional_label_kwargs={},
         additional_widget_kwargs={},
     ):
+        """_build_unit_fn 동작을 수행합니다."""
         if not attr_name or not property_type:
             return
 
@@ -181,6 +186,7 @@ class MeasurementPropertyWidget(UsdPropertiesWidget):
         additional_label_kwargs={},
         additional_widget_kwargs={},
     ):
+        """_build_precision_fn 동작을 수행합니다."""
         if not attr_name or not property_type:
             return
 
@@ -217,6 +223,7 @@ class MeasurementPropertyWidget(UsdPropertiesWidget):
         additional_label_kwargs={},
         additional_widget_kwargs={},
     ):
+        """_build_size_fn 동작을 수행합니다."""
         if not attr_name or not property_type:
             return
 
@@ -253,6 +260,7 @@ class MeasurementPropertyWidget(UsdPropertiesWidget):
         additional_label_kwargs={},
         additional_widget_kwargs={},
     ):
+        """_build_color_ui 동작을 수행합니다."""
         if not attr_name or not property_type:
             return
 

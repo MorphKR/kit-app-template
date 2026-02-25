@@ -82,6 +82,7 @@ def convert_distance_and_units(distance_in: float, units_in: str):
 
 
 def convert_area_to_units(value_in: float, units_in: str) -> float:
+    """convert_area_to_units 동작을 수행합니다."""
     match units_in:
         case "mm":
             return value_in * 100

@@ -35,22 +35,27 @@ class TreeUIItemCache:
 
 
 class MeasurePanelDelegate(ui.AbstractItemDelegate):
+    """MeasurePanelDelegate 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
         self.__ui_cache: OrderedDict[int, TreeUIItemCache] = OrderedDict()
 
     @property
     def items(self):
+        """items 동작을 수행합니다."""
         return self.__ui_cache.items()
 
     @property
     def item_at(self, index: int):
+        """item_at 동작을 수행합니다."""
         for pos, item in enumerate(self.__ui_cache):
             if pos == index:
                 return item
         return None
 
     def _on_visibility_clicked(self, button, image, uuid: int):
+        """_on_visibility_clicked 동작을 수행합니다."""
         button.checked = not button.checked
         image.source_url = get_icon_path("visibility_off") if button.checked else get_icon_path("visibility_on")
 
@@ -59,13 +64,16 @@ class MeasurePanelDelegate(ui.AbstractItemDelegate):
         MeasurementManager().set_visibility(uuid, not button.checked)
 
     def _on_go_to_clicked(self, button, uuid: int):
+        """_on_go_to_clicked 동작을 수행합니다."""
         MeasurementManager().frame_measurement(uuid)
 
     def _on_label_click(self, button, field, label, uuid: int):
+        """_on_label_click 동작을 수행합니다."""
         if button != 0:
             return
 
         def _on_end_edit(model, field, label):
+            """_on_end_edit 동작을 수행합니다."""
             field.visible = False
             label.text = model.as_string
 
@@ -78,18 +86,21 @@ class MeasurePanelDelegate(ui.AbstractItemDelegate):
         self.subscription = field.model.subscribe_end_edit_fn(lambda m, f=field, l=label: _on_end_edit(m, f, l))
 
     def _on_delete_clicked(self, uuid: int):
+        """_on_delete_clicked 동작을 수행합니다."""
         ReferenceManager().ui_manage_panel._measurement_view.clear_selection()
         MeasurementManager().delete(uuid)
 
     # --------------------------
     def build_header(self, column_id: int = 0) -> None:
         # clear the tree cache before rebuilding
+        """build_header 동작을 수행합니다."""
         _ids = ["Visible", "Go to", "Name", "Value", "Type", ""]
         _identifiers = ["VisibleLabel", "GotoLabel", "NameLabel", "ValueLabel", "TypeLabel", ""]
         assert len(_ids) == len(_identifiers)
         ui.Label(_ids[column_id], alignment=ui.Alignment.CENTER, identifier=_identifiers[column_id])
 
     def build_branch(self, model, item, column_id, level, expanded):
+        """build_branch 동작을 수행합니다."""
         if item is None:
             return
 
@@ -112,6 +123,7 @@ class MeasurePanelDelegate(ui.AbstractItemDelegate):
                     ui.Spacer(width=ui.Pixel(12))
 
     def build_widget(self, model, item, column_id, level, expanded):
+        """build_widget 동작을 수행합니다."""
         if item is None:
             return
 

@@ -56,13 +56,16 @@ class ResetButton(ui.Widget):
 
     @property
     def visible(self) -> bool:
+        """visible 동작을 수행합니다."""
         return self._button.visible
 
     @visible.setter
     def visible(self, value: bool) -> None:
+        """visible 동작을 수행합니다."""
         self._button.visible = value
 
     def __on_creation_state_changed(self, creation_state: MeasureCreationState):
+        """__on_creation_state_changed 동작을 수행합니다."""
         self._button.enabled = creation_state in [MeasureCreationState.NONE, MeasureCreationState.START_SELECTION]
 
     def __build(
@@ -74,7 +77,9 @@ class ResetButton(ui.Widget):
         identifier: Optional[str],
     ) -> ui.Rectangle:
 
+        """__build 동작을 수행합니다."""
         def _reset_check_fn(value: Any, button: int):
+            """_reset_check_fn 동작을 수행합니다."""
             if button == 0 and StateMachine().tool_creation_state in [
                 MeasureCreationState.NONE,
                 MeasureCreationState.START_SELECTION,
@@ -82,6 +87,7 @@ class ResetButton(ui.Widget):
                 reset_fn(reset_val)
 
         def _update_reset_button(value: Any, default_value: Any, btn: ui.Rectangle) -> None:
+            """_update_reset_button 동작을 수행합니다."""
             if isinstance(value, ui.AbstractItemModel):
                 value = value.get_item_value_model()
 
@@ -130,7 +136,9 @@ class ResetButton(ui.Widget):
 
 
 class ToolButton(ui.Button):
+    """ToolButton 클래스 설명입니다."""
     def __init__(self, tool: MeasureMode, clicked_fn: Callable[[MeasureMode], None], enabled: bool = True):
+        """__init__ 동작을 수행합니다."""
         self._mode: MeasureMode = tool
         self._clicked_fn: Callable[[MeasureMode], None] = clicked_fn
 
@@ -152,6 +160,7 @@ class ToolButton(ui.Button):
 
     def _on_clicked(self):
         # Check if tool is active. If so. Change state and reset the state machine
+        """_on_clicked 동작을 수행합니다."""
         if self.checked:
             StateMachine().reset_state_to_default(is_current_tool=False)
             return
@@ -159,14 +168,17 @@ class ToolButton(ui.Button):
         self._clicked_fn(self._mode)
 
     def _on_state_changed(self, state: MeasureState, mode: MeasureMode) -> None:
+        """_on_state_changed 동작을 수행합니다."""
         value = state == MeasureState.CREATE and mode == self._mode
         self.checked = value
 
 
 class GroupBoxBase(metaclass=ABCMeta):
+    """GroupBoxBase 클래스 설명입니다."""
     def __init__(
         self, group_name: str, draw_label=True, content_name: str = "group_content", bounds_name: str = "group_bounds"
     ):
+        """__init__ 동작을 수행합니다."""
         self._name = group_name
         self._bounds_name = bounds_name
         self._content_name = content_name
@@ -174,6 +186,7 @@ class GroupBoxBase(metaclass=ABCMeta):
         self._group: ui.ZStack = self.__build()
 
     def __build(self) -> ui.ZStack:
+        """__build 동작을 수행합니다."""
         _root = ui.ZStack(name="group_root", style=STYLE_GROUP_BOX)
 
         with _root:
@@ -199,6 +212,7 @@ class GroupBoxBase(metaclass=ABCMeta):
 
     @abstractmethod
     def _build_content(self):
+        """_build_content 동작을 수행합니다."""
         pass
 
 
@@ -218,13 +232,16 @@ class Snaps:
 
     @property
     def active(self) -> List[SnapMode]:
+        """active 동작을 수행합니다."""
         _active: List[SnapMode] = [val for _, val in vars(self).items() if not callable(val) and val]
         return _active
 
 
 class SnapGroupBox(GroupBoxBase):
 
+    """SnapGroupBox 클래스 설명입니다."""
     def __init__(self, group_name: str):
+        """__init__ 동작을 수행합니다."""
         self._settings = carb.settings.get_settings()
         self._snaps = Snaps()
         self._on_snaps_changed_fn: Set[Callable[[List[SnapMode]], None]] = set()
@@ -234,10 +251,12 @@ class SnapGroupBox(GroupBoxBase):
 
     @property
     def snaps(self) -> List[SnapMode]:
+        """snaps 동작을 수행합니다."""
         return self._snaps.active
 
     @snaps.setter
     def snaps(self, snaps: List[SnapMode]) -> None:
+        """snaps 동작을 수행합니다."""
         self._snaps.surface = None
         self._snaps.vertex = None
         self._snaps.mid = None
@@ -264,6 +283,7 @@ class SnapGroupBox(GroupBoxBase):
             self._snap_collection.model.set_value(self._display_order.index(snaps[0]))
 
     def _build_content(self):
+        """_build_content 동작을 수행합니다."""
         with ui.HStack(spacing=24, style=STYLE_CHECKBOX):
             self._snap_collection = ui.RadioCollection()
             self._display_order = []
@@ -373,6 +393,7 @@ class SnapGroupBox(GroupBoxBase):
         self._update_snaps(self._snap_collection.model)
 
     def _update_widget_style_name(self):
+        """_update_widget_style_name 동작을 수행합니다."""
         for widget in [
             self._surface,
             self._surface_label,
@@ -390,12 +411,15 @@ class SnapGroupBox(GroupBoxBase):
             widget.name = "" if widget.enabled else "disabled"
 
     def add_on_snaps_changed_fn(self, func: Callable[[List[SnapMode]], None]):
+        """add_on_snaps_changed_fn 동작을 수행합니다."""
         self._on_snaps_changed_fn.add(func)
 
     def clear_snaps(self):
+        """clear_snaps 동작을 수행합니다."""
         self._snap_collection.model.set_value(SnapMode.NONE.value)
 
     def lock_snaps(self, locked: bool, exclude: List[SnapMode] = []) -> None:
+        """lock_snaps 동작을 수행합니다."""
         enable_geometry_snap = self._geometry_snap_enabled()
 
         self._surface_label.enabled = self._surface.enabled = not locked or SnapMode.SURFACE in exclude
@@ -414,11 +438,13 @@ class SnapGroupBox(GroupBoxBase):
         self._update_widget_style_name()
 
     def set_snap(self, mode: SnapMode) -> None:
+        """set_snap 동작을 수행합니다."""
         if self._snap_collection is None:
             return
         self._snap_collection.model.set_value(self._display_order.index(mode))
 
     def set_next_snap(self) -> None:
+        """set_next_snap 동작을 수행합니다."""
         if self._snap_collection is None:
             return
         current_snap_idx = self._snap_collection.model.as_int
@@ -429,15 +455,18 @@ class SnapGroupBox(GroupBoxBase):
         self.set_snap(snap)
 
     def _update_snaps(self, model):
+        """_update_snaps 동작을 수행합니다."""
         self.snaps = [self._display_order[model.as_int]]
 
     def _on_snaps_changed(self, model: ui.AbstractValueModel) -> None:
+        """_on_snaps_changed 동작을 수행합니다."""
         self._update_snaps(model)
 
         for fn in self._on_snaps_changed_fn:
             fn(self.snaps)
 
     def _geometry_snap_enabled(self):
+        """_geometry_snap_enabled 동작을 수행합니다."""
         enabled = self._settings.get("/rtx-transient/scenedb/useUniformsReindexing")
         if not enabled:
             carb.log_warn(

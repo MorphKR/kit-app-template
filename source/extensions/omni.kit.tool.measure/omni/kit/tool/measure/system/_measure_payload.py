@@ -21,8 +21,10 @@ from ..common import DisplayAxisSpace, LabelSize, MeasureMode, Precision, UnitTy
 
 
 class MeasurePayload:
+    """MeasurePayload 클래스 설명입니다."""
     def __init__(self):
         # Core
+        """__init__ 동작을 수행합니다."""
         self.uuid: int = int(str(uuid4().int)[:8])
         # Metadata
         self.prim = None
@@ -44,6 +46,7 @@ class MeasurePayload:
         self.label_color: Gf.Vec4f = Gf.Vec4f(0.0, 1.0, 1.0, 1.0)
 
     def __repr__(self) -> str:
+        """__repr__ 동작을 수행합니다."""
         payload = {
             "uuid": self.uuid,
             "prim_paths": self.prim_paths,
@@ -64,12 +67,14 @@ class MeasurePayload:
         return str(payload)
 
     def update_from_compute(self, data) -> None:
+        """update_from_compute 동작을 수행합니다."""
         self.computed_points = data.points
         self.primary_value = data.primary
         self.secondary_values = data.secondary
 
     @staticmethod
     def from_prim(prim: "Usd.Prim") -> Optional["MeasurePayload"]:
+        """from_prim 동작을 수행합니다."""
         if prim and prim.HasAttribute("measure:uuid"):
             payload: "MeasurePayload" = MeasurePayload()
             # Core
@@ -106,6 +111,7 @@ class MeasurePayload:
     @staticmethod
     def read_prim_paths(prim: Usd.Prim):
         # Can check if the newer paths_relationship exists and use that first
+        """read_prim_paths 동작을 수행합니다."""
         if prim.HasRelationship("measure:meta:prim_paths_relationship"):
             prim_relationship = prim.GetRelationship("measure:meta:prim_paths_relationship")
         elif prim.HasAttribute("measure:meta:prim_paths"):
@@ -122,6 +128,7 @@ class MeasurePayload:
 
     @staticmethod
     def write_prim_paths(prim: Usd.Prim, prim_paths: List[Sdf.Path]):
+        """write_prim_paths 동작을 수행합니다."""
         indexing_attr = prim.GetAttribute("measure:meta:prim_path_indices")
         if not indexing_attr:
             indexing_attr = prim.CreateAttribute("measure:meta:prim_path_indices", typeName=Sdf.ValueTypeNames.IntArray)
@@ -145,6 +152,7 @@ class MeasurePayload:
 
     @staticmethod
     def convert_attribute_to_relationship(prim: Usd.Prim, attr_name: str):
+        """convert_attribute_to_relationship 동작을 수행합니다."""
         prim_paths = [Sdf.Path(path) for path in prim.GetAttribute(attr_name).Get()]
         # prim.RemoveProperty(attr_name)
         try:
@@ -157,6 +165,7 @@ class MeasurePayload:
 
     @staticmethod
     def world_to_local_points(points: List[Gf.Vec3d], paths: List[str]):
+        """world_to_local_points 동작을 수행합니다."""
         local_points = []
 
         stage = ou.get_context().get_stage()  # For pxr.Usd check

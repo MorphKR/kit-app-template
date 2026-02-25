@@ -50,20 +50,24 @@ class StateMachineEvent:
     """
 
     def __init__(self, event_type: Type[Callable[..., None]]):
+        """__init__ 동작을 수행합니다."""
         self._event_type = event_type
         self._subscriber_id: int = 1
         self._event_subscribers: Dict[int, event_type] = {}
 
     def subscribe(self, callback: Type[Callable[..., None]]) -> int:
+        """subscribe 동작을 수행합니다."""
         id = self._subscriber_id
         self._subscriber_id += 1
         self._event_subscribers[id] = callback
         return id
 
     def unsubscribe(self, id: int) -> None:
+        """unsubscribe 동작을 수행합니다."""
         self._event_subscribers.pop(id, None)
 
     def _run(self, *args, **kwargs):
+        """_run 동작을 수행합니다."""
         for fn in self._event_subscribers.values():
             fn(*args, **kwargs)
 
@@ -71,51 +75,65 @@ class StateMachineEvent:
 
 
 class StateMachineStageListenerManager:
+    """StateMachineStageListenerManager 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self.__subscriber_id: int = 1
         self.__events: Dict[int, Callable] = {}
 
     def reset(self):
+        """reset 동작을 수행합니다."""
         self.__events = {}
 
     def subscribe(self, callback: Callable):
+        """subscribe 동작을 수행합니다."""
         id = self.__subscriber_id
         self.__subscriber_id += 1
         self.__events[id] = callback
         return id
 
     def unsubscribe(self, id: int) -> None:
+        """unsubscribe 동작을 수행합니다."""
         self.__events.pop(id, None)
 
     def exec_event(self, notice):
+        """exec_event 동작을 수행합니다."""
         for fn in self.__events.values():
             fn(notice)
 
 
 class StateMachineKeyPressedManager:
+    """StateMachineKeyPressedManager 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self.__subscriber_id: int = 1
         self.__events: Dict[int, Callable[[KeyboardInput], None]] = {}
 
     def reset(self):
+        """reset 동작을 수행합니다."""
         self.__events = {}
 
     def subscribe(self, callback: Callable[[KeyboardInput], None]):
+        """subscribe 동작을 수행합니다."""
         id = self.__subscriber_id
         self.__subscriber_id += 1
         self.__events[id] = callback
         return id
 
     def unsubscribe(self, id: int) -> None:
+        """unsubscribe 동작을 수행합니다."""
         self.__events.pop(id, None)
 
     def exec_event(self, key: KeyboardInput):
+        """exec_event 동작을 수행합니다."""
         for fn in self.__events.values():
             fn(key)
 
 
 class StateMachineStageEventManager:
+    """StateMachineStageEventManager 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self.__events: Dict[StageEventType, StateMachineEvent] = {
             StageEventType.OPENING: StateMachineEvent(Callable),
             StageEventType.OPENED: StateMachineEvent(Callable),
@@ -126,19 +144,24 @@ class StateMachineStageEventManager:
         }
 
     def subscribe(self, callback: Callable, event_type: StageEventType) -> int:
+        """subscribe 동작을 수행합니다."""
         return self.__events[event_type].subscribe(callback)
 
     def unsubscribe(self, id: int, event_type: StageEventType) -> None:
+        """unsubscribe 동작을 수행합니다."""
         self.__events[event_type].unsubscribe(id)
 
     def exec_event(self, event: carb.eventdispatcher.Event) -> None:
+        """exec_event 동작을 수행합니다."""
         event_type = get_context().stage_event_type(event.event_name)
         stage_event = self.__events.get(event_type, lambda *args, **kwargs: None)
         stage_event()
 
 
 class StateMachineLegacyLayerEventManager:
+    """StateMachineLegacyLayerEventManager 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self.__events: Dict[int, StateMachineEvent] = {
             int(LayerEventType.EDIT_TARGET_CHANGED): StateMachineEvent(Callable[[LayerEventPayload, bool], None]),
             int(LayerEventType.LIVE_SESSION_STATE_CHANGED): StateMachineEvent(
@@ -151,6 +174,7 @@ class StateMachineLegacyLayerEventManager:
         }
 
     def subscribe(self, callback: Callable[["LayerEventPayload", bool], None], event_type: LayerEventType) -> int:
+        """subscribe 동작을 수행합니다."""
         if self.__events.get(int(event_type), None) == None:
             log_error(f"{event_type} is not a supported event for StateMachineLayerEventManager.")
             return -1
@@ -158,9 +182,11 @@ class StateMachineLegacyLayerEventManager:
         return self.__events[int(event_type)].subscribe(callback)
 
     def unsubscribe(self, id: int, event_type: LayerEventType) -> None:
+        """unsubscribe 동작을 수행합니다."""
         self.__events[int(event_type)].unsubscribe(id)
 
     def exec_event(self, event: IEvent, live_session: bool) -> None:
+        """exec_event 동작을 수행합니다."""
         payload = get_layer_event_payload(event)
         if not payload or payload.event_type is None:
             return
@@ -170,7 +196,9 @@ class StateMachineLegacyLayerEventManager:
 
 
 class StateMachineLayerEventManager:
+    """StateMachineLayerEventManager 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self.__events: Dict[LayerEventType, StateMachineEvent] = {
             LayerEventType.EDIT_TARGET_CHANGED: StateMachineEvent(Callable[[LayerEventPayload, bool], None]),
             LayerEventType.LIVE_SESSION_STATE_CHANGED: StateMachineEvent(Callable[[LayerEventPayload, bool], None]),
@@ -181,6 +209,7 @@ class StateMachineLayerEventManager:
         }
 
     def subscribe(self, callback: Callable[["LayerEventPayload", bool], None], event_type: LayerEventType) -> int:
+        """subscribe 동작을 수행합니다."""
         if self.__events.get(event_type, None) == None:
             log_error(f"{event_type} is not a supported event for StateMachineLayerEventManager.")
             return -1
@@ -188,9 +217,11 @@ class StateMachineLayerEventManager:
         return self.__events[event_type].subscribe(callback)
 
     def unsubscribe(self, id: int, event_type: LayerEventType) -> None:
+        """unsubscribe 동작을 수행합니다."""
         self.__events[event_type].unsubscribe(id)
 
     def exec_event(self, event: carb.eventdispatcher.Event, live_session: bool) -> None:
+        """exec_event 동작을 수행합니다."""
         payload = get_layer_event_payload(event)
         if not payload or payload.event_type is None:
             return
@@ -202,6 +233,7 @@ class StateMachineLayerEventManager:
 class StateMachine:
     # TODO: Tool state and Tool mode need to have a global state change as well for cases of
     # being in a create mode, but switching to another mode in create. Currently resetting to default before swap works.
+    """StateMachine 클래스 설명입니다."""
     __state_type = Callable[[MeasureState, MeasureMode], None]
     __create_state_changed = Callable[[MeasureCreationState], None]
     __mode_type = Callable[[MeasureMode], None]
@@ -212,6 +244,7 @@ class StateMachine:
 
     def __singleton_init__(self):
 
+        """__singleton_init__ 동작을 수행합니다."""
         self.__latest_layer_event = hasattr(oku.layers, "layer_event_name")
 
         # Carb Input
@@ -295,36 +328,44 @@ class StateMachine:
         )
 
     def __new__(cls):
+        """__new__ 동작을 수행합니다."""
         if not hasattr(cls, "_instance"):
             cls._instance = super().__new__(cls)
             cls._instance.__singleton_init__()
         return cls._instance
 
     def __repr__(self) -> str:
+        """__repr__ 동작을 수행합니다."""
         return f"StateMachine<{self.tool_state}, {self.tool_mode}>"
 
     @property
     def tool_state(self) -> MeasureState:
+        """tool_state 동작을 수행합니다."""
         return MeasureState(self._tool_state.as_int)
 
     @tool_state.setter
     def tool_state(self, state: MeasureState) -> None:
+        """tool_state 동작을 수행합니다."""
         self._tool_state.as_int = state.value
 
     @property
     def tool_mode(self) -> MeasureMode:
+        """tool_mode 동작을 수행합니다."""
         return MeasureMode(self._tool_mode.as_int)
 
     @tool_mode.setter
     def tool_mode(self, mode: MeasureMode) -> None:
+        """tool_mode 동작을 수행합니다."""
         self._tool_mode.as_int = mode.value
 
     @property
     def tool_creation_state(self) -> MeasureCreationState:
+        """tool_creation_state 동작을 수행합니다."""
         return MeasureCreationState(self._tool_creation_state.as_int)
 
     @tool_creation_state.setter
     def tool_creation_state(self, state: MeasureCreationState) -> None:
+        """tool_creation_state 동작을 수행합니다."""
         self._tool_creation_state.as_int = state.value
 
     def set_creation_state(self, mode: MeasureMode) -> None:
@@ -406,6 +447,7 @@ class StateMachine:
         return self._on_edit_evt.subscribe(func)
 
     def _on_tool_state_changed(self, model: ui.AbstractValueModel):
+        """_on_tool_state_changed 동작을 수행합니다."""
         state = MeasureState(model.as_int)
         mode = self.tool_mode
 
@@ -421,24 +463,30 @@ class StateMachine:
         self._on_state_changed_evt(state, mode)
 
     def _on_tool_mode_changed(self, model: ui.AbstractValueModel):
+        """_on_tool_mode_changed 동작을 수행합니다."""
         return
 
     def _on_tool_creation_state_changed(self, model: ui.AbstractValueModel):
+        """_on_tool_creation_state_changed 동작을 수행합니다."""
         creation_state = MeasureCreationState(model.as_int)
         self._on_create_state_changed_evt(creation_state)
 
     # Stage Listener Logic
     def __on_stage_objects_changed(self, notice, stage):
+        """__on_stage_objects_changed 동작을 수행합니다."""
         self._stage_listener_manager.exec_event(notice)
 
     def subscribe_to_stage_listener(self, callback: Callable) -> int:
+        """subscribe_to_stage_listener 동작을 수행합니다."""
         return self._stage_listener_manager.subscribe(callback)
 
     def unsubscribe_to_stage_listener(self, id: int) -> None:
+        """unsubscribe_to_stage_listener 동작을 수행합니다."""
         self._stage_listener_manager.unsubscribe(id)
 
     # Stage Event Logic
     def __on_stage_event(self, event: carb.eventdispatcher.Event) -> None:
+        """__on_stage_event 동작을 수행합니다."""
         self._stage_event_manager.exec_event(event)
 
     def subscribe_to_stage_event(self, callback: Callable, event_type: StageEventType) -> int:
@@ -466,21 +514,25 @@ class StateMachine:
 
     # Layer Event Logic
     def __on_legacy_layer_event(self, event: IEvent) -> None:
+        """__on_legacy_layer_event 동작을 수행합니다."""
         live_session: bool = self.__layers.get_live_syncing().is_in_live_session()
         self._legacy_layer_event_manager.exec_event(event, live_session)
 
     def __on_layer_event(self, event: carb.eventdispatcher.Event) -> None:
+        """__on_layer_event 동작을 수행합니다."""
         live_session: bool = self.__layers.get_live_syncing().is_in_live_session()
         self._layer_event_manager.exec_event(event, live_session)
 
     def subscribe_to_layer_event(
         self, callback: Callable[["LayerEventPayload", bool], None], event_type: LayerEventType
     ) -> int:
+        """subscribe_to_layer_event 동작을 수행합니다."""
         if self.__latest_layer_event:
             return self._layer_event_manager.subscribe(callback, event_type)
         return self._legacy_layer_event_manager.subscribe(callback, event_type)
 
     def unsubscribe_to_layer_event(self, id: int, event_type: LayerEventType) -> None:
+        """unsubscribe_to_layer_event 동작을 수행합니다."""
         if self.__latest_layer_event:
             self._layer_event_manager.unsubscribe(id, event_type)
         else:
@@ -488,24 +540,30 @@ class StateMachine:
 
     # Key Pressed Logic
     def _on_key_pressed(self, key: KeyboardInput) -> None:
+        """_on_key_pressed 동작을 수행합니다."""
         self._key_pressed_manager.exec_event(key)
 
     def subscribe_to_key_pressed_event(self, callback: Callable[[KeyboardInput], None]) -> int:
+        """subscribe_to_key_pressed_event 동작을 수행합니다."""
         return self._key_pressed_manager.subscribe(callback)
 
     def unsubscribe_to_key_pressed_event(self, id: int) -> None:
+        """unsubscribe_to_key_pressed_event 동작을 수행합니다."""
         self._key_pressed_manager.unsubscribe(id)
 
     # Carb Input Handling
     def _subscribe_input(self):
+        """_subscribe_input 동작을 수행합니다."""
         return self._input.subscribe_to_input_events(self._on_input_event, order=0)
 
     def _unsubscribe_input(self):
+        """_unsubscribe_input 동작을 수행합니다."""
         if self._input_sub_id:
             self._input.unsubscribe_to_input_events(self._input_sub_id)
             self._input_sub_id = None
 
     def _on_input_event(self, event: InputEvent, *_) -> bool:
+        """_on_input_event 동작을 수행합니다."""
         if event.deviceType == DeviceType.MOUSE:
             return self._on_mouse_event(event.event)
         elif event.deviceType == DeviceType.KEYBOARD:
@@ -515,23 +573,27 @@ class StateMachine:
         return True
 
     def _on_mouse_event(self, event: Union[object, MouseEvent], *args, **kwargs) -> bool:
+        """_on_mouse_event 동작을 수행합니다."""
         if isinstance(event, MouseEvent):
             if event.type == MouseEventType.LEFT_BUTTON_DOWN:
                 pass
         return True
 
     def _on_keyboard_event(self, event: Union[object, KeyboardEvent], *args, **kwargs) -> bool:
+        """_on_keyboard_event 동작을 수행합니다."""
         if isinstance(event, KeyboardEvent) and event.input in KEYBOARD_INPUTS:
             if event.type == KeyboardEventType.KEY_RELEASE:
                 self._on_key_pressed(event.input)
         return True
 
     def _on_gamepad_event(self, event: Union[object, GamepadEvent], *args, **kwargs) -> bool:
+        """_on_gamepad_event 동작을 수행합니다."""
         if isinstance(event, GamepadEvent):
             pass
         return True
 
     def deinit(self) -> None:
+        """deinit 동작을 수행합니다."""
         self.reset_state_to_default()
 
         self.__stage_event_sub.clear()

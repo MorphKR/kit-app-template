@@ -30,6 +30,7 @@ from ._measure_prim import MeasurePrim
 
 
 def _export_csv(stage_url: str, export_folder: str, measure_prims: List[MeasurePrim]) -> None:
+    """_export_csv 동작을 수행합니다."""
     stage_name = stage_url.split("/")[-1].split(".")[0]
     export_filepath = Path(f"{export_folder}/{stage_name}.csv")
     with export_filepath.open(mode="w") as f:
@@ -50,9 +51,11 @@ def _export_csv(stage_url: str, export_folder: str, measure_prims: List[MeasureP
 
 
 class ExportPanel(ui.Window):
+    """ExportPanel 클래스 설명입니다."""
     _WINDOW_NAME = "Measure Export"
 
     def __init__(self) -> None:
+        """__init__ 동작을 수행합니다."""
         self._settings = get_settings()
         export_dir = Path(get_tokens_interface().resolve("${documents}"))
         self._settings.set_default_string(EXPORT_FOLDER, str(export_dir.resolve()))
@@ -81,21 +84,26 @@ class ExportPanel(ui.Window):
 
     @property
     def export_folder(self) -> str:
+        """export_folder 동작을 수행합니다."""
         return self._settings.get_as_string(EXPORT_FOLDER)
 
     @property
     def _export_path(self) -> str:
+        """_export_path 동작을 수행합니다."""
         return os.path.join(self.export_folder, f"{ou.get_context().get_stage_url().split('/')[-1].split('.')[0]}.csv")
 
     def destroy(self) -> None:
+        """destroy 동작을 수행합니다."""
         self.visible = False
         super().destroy()
 
     def _on_browse_clicked(self) -> None:
+        """_on_browse_clicked 동작을 수행합니다."""
         current_path = Path(self.export_folder)
         self._filepicker.show(str(current_path))
 
     def _on_export_dir_picked(self, export_directory: str) -> None:
+        """_on_export_dir_picked 동작을 수행합니다."""
         if export_directory.lower().startswith("bookmarks:"):
             post_warn_notification("Cannot export Measure data to the root bookmarks folder.")
             return
@@ -110,6 +118,7 @@ class ExportPanel(ui.Window):
         self._filepicker.hide()
 
     def _on_export_clicked(self) -> None:
+        """_on_export_clicked 동작을 수행합니다."""
         stage_url = ou.get_context().get_stage_url()
         measure_prims: List[MeasurePrim] = MeasurementManager()._model.get_items()
 
@@ -129,6 +138,7 @@ class ExportPanel(ui.Window):
         post_warn_notification("Failed to Export CSV: No Measurement Data To Export.")
 
     def _build_ui(self) -> None:
+        """_build_ui 동작을 수행합니다."""
         with self.frame:
             with ui.VStack(spacing=4):
                 with ui.HStack():

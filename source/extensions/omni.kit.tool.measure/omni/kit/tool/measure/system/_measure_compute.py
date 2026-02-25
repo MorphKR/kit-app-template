@@ -39,26 +39,33 @@ from ._models import PointPrimRelationshipModel
 
 @dataclass
 class ComputeOutput:
+    """ComputeOutput 클래스 설명입니다."""
     points: List[Gf.Vec3d]
     primary: float
     secondary: List[float]
 
 
 class MeasureCompute:
+    """MeasureCompute 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         self._ctx = get_context()
         self._point_models: List[PointPrimRelationshipModel] = []
 
     @abstractmethod
     def execute(self, payload: MeasurePayload) -> Optional[ComputeOutput]:
+        """execute 동작을 수행합니다."""
         raise NotImplementedError
 
 
 class PointToPointCompute(MeasureCompute):
+    """PointToPointCompute 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
 
     def execute(self, payload: MeasurePayload) -> Optional[ComputeOutput]:
+        """execute 동작을 수행합니다."""
         if len(payload.prim_paths) != len(payload.points):
             return None
 
@@ -104,10 +111,13 @@ class PointToPointCompute(MeasureCompute):
 
 
 class MultiPointCompute(MeasureCompute):
+    """MultiPointCompute 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
 
     def execute(self, payload: MeasurePayload) -> Optional[ComputeOutput]:
+        """execute 동작을 수행합니다."""
         if len(payload.prim_paths) != len(payload.points):
             return None
 
@@ -132,6 +142,7 @@ class MeshBBoxCompute(MeasureCompute):
     """MESH BBox: 6 points (X/Y/Z 축 각각 start,end) → primary=합, secondary=[x,y,z] → 하위 탭 X,Y,Z."""
 
     def execute(self, payload: MeasurePayload) -> Optional[ComputeOutput]:
+        """execute 동작을 수행합니다."""
         if len(payload.prim_paths) != len(payload.points) or len(payload.points) != 6:
             return None
         if len(self._point_models) == 0:
@@ -149,10 +160,13 @@ class MeshBBoxCompute(MeasureCompute):
 
 
 class AngleCompute(MeasureCompute):
+    """AngleCompute 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
 
     def _calculate_angle(self, points: Gf.Vec3d) -> float:
+        """_calculate_angle 동작을 수행합니다."""
         start, axis, end = points[0], points[1], points[2]
 
         vec_a = Gf.Vec3d(start[0] - axis[0], start[1] - axis[1], start[2] - axis[2])
@@ -177,6 +191,7 @@ class AngleCompute(MeasureCompute):
         return angle_rad * 57.2957795131  # 180.0/π
 
     def execute(self, payload: MeasurePayload) -> Optional[ComputeOutput]:
+        """execute 동작을 수행합니다."""
         if len(payload.prim_paths) != len(payload.points):
             return None
 
@@ -195,10 +210,13 @@ class AngleCompute(MeasureCompute):
 
 
 class AreaCompute(MeasureCompute):
+    """AreaCompute 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
 
     def _calculate_area(self, points: List[Gf.Vec3d]) -> float:
+        """_calculate_area 동작을 수행합니다."""
         unique_points: List[Gf.Vec3d] = []
 
         if points:
@@ -224,6 +242,7 @@ class AreaCompute(MeasureCompute):
         return abs(Gf.Dot(total, surface_normal) * 0.5)
 
     def execute(self, payload: MeasurePayload) -> Optional[ComputeOutput]:
+        """execute 동작을 수행합니다."""
         if len(payload.prim_paths) != len(payload.points):
             return None
 
@@ -239,13 +258,17 @@ class AreaCompute(MeasureCompute):
 
 
 class DiameterCompute(MeasureCompute):
+    """DiameterCompute 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
 
     def _compute_center(self, a: Gf.Vec3d, b: Gf.Vec3d, c: Gf.Vec3d) -> Gf.Vec3d:
+        """_compute_center 동작을 수행합니다."""
         def line_intersect(a: Gf.Vec3d, b: Gf.Vec3d, c: Gf.Vec3d, d: Gf.Vec3d) -> Gf.Vec3d:
             # DO NOT use [*a], [*b] etc to unpack any Gf types. It is VERY slow.
             # By simply changing them to explicit unpacking ([a[0], a[1], a[2]]), this function goes down from 5ms to 0.1ms
+            """line_intersect 동작을 수행합니다."""
             n_a, n_b, n_c, n_d = (
                 np.array([a[0], a[1], a[2]]),
                 np.array([b[0], b[1], b[2]]),
@@ -267,6 +290,7 @@ class DiameterCompute(MeasureCompute):
         return line_intersect(mid_a, bisect_a, mid_b, bisect_b)
 
     def execute(self, payload: MeasurePayload) -> Optional[ComputeOutput]:
+        """execute 동작을 수행합니다."""
         if len(payload.prim_paths) != len(payload.points):
             return None
 
@@ -286,7 +310,9 @@ class DiameterCompute(MeasureCompute):
 
 
 class SelectedCompute(MeasureCompute):
+    """SelectedCompute 클래스 설명입니다."""
     def __init__(self):
+        """__init__ 동작을 수행합니다."""
         super().__init__()
 
     @wp.kernel
@@ -296,6 +322,7 @@ class SelectedCompute(MeasureCompute):
         out_distances: wp.array(dtype=wp.float64),
         out_indices: wp.array(dtype=wp.int32),
     ):
+        """__find_closest_points 동작을 수행합니다."""
         tid = wp.tid()
 
         point = points_a[tid]
@@ -317,6 +344,7 @@ class SelectedCompute(MeasureCompute):
         out_distances: wp.array(dtype=wp.float64),
         out_indices: wp.array(dtype=wp.int32),
     ):
+        """__find_furthest_points 동작을 수행합니다."""
         tid = wp.tid()
 
         point = points_a[tid]
@@ -334,6 +362,7 @@ class SelectedCompute(MeasureCompute):
     def __compute_nearest(
         self, points_a: List[Gf.Vec3d], points_b: List[Gf.Vec3d], payload: MeasurePayload
     ) -> ComputeOutput:
+        """__compute_nearest 동작을 수행합니다."""
         num_points_a = len(points_a)
         out_distances = wp.empty(num_points_a, dtype=wp.float64)
         out_indices = wp.empty(num_points_a, dtype=wp.int32)
@@ -359,6 +388,7 @@ class SelectedCompute(MeasureCompute):
     def __compute_furthest(
         self, points_a: List[Gf.Vec3d], points_b: List[Gf.Vec3d], payload: MeasurePayload
     ) -> ComputeOutput:
+        """__compute_furthest 동작을 수행합니다."""
         num_points_a = len(points_a)
         out_distances = wp.empty(num_points_a, dtype=wp.float64)
         out_indices = wp.empty(num_points_a, dtype=wp.int32)
@@ -382,6 +412,7 @@ class SelectedCompute(MeasureCompute):
         return ComputeOutput([pt_a, pt_b], out_distance, [])
 
     def __compute_center(self, prim_a: "Usd.Prim", prim_b: "Usd.Prim", payload: MeasurePayload) -> ComputeOutput:
+        """__compute_center 동작을 수행합니다."""
         bbox_cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
         pt_a = bbox_cache.ComputeWorldBound(prim_a).ComputeCentroid()
         pt_b = bbox_cache.ComputeWorldBound(prim_b).ComputeCentroid()
@@ -393,6 +424,7 @@ class SelectedCompute(MeasureCompute):
         return ComputeOutput([pt_a, pt_b], out_distance, [])
 
     def execute(self, payload: MeasurePayload) -> Optional[ComputeOutput]:
+        """execute 동작을 수행합니다."""
         stage = self._ctx.get_stage()
 
         prim_a, prim_b = stage.GetPrimAtPath(payload.prim_paths[0]), stage.GetPrimAtPath(payload.prim_paths[1])
@@ -403,6 +435,7 @@ class SelectedCompute(MeasureCompute):
         # Compute mesh points for Min or Max before executing.
         def extract_descendents_points(prim):
             # Iterate through prim and descendents to find meshes
+            """extract_descendents_points 동작을 수행합니다."""
             points = []
             predicate = Usd.TraverseInstanceProxies(Usd.PrimDefaultPredicate)
             prim_iter = iter(Usd.PrimRange(prim, predicate))

@@ -57,7 +57,7 @@ class MeasureDrawManipulator(sc.Manipulator):
     def __on_item_changed(self, model, item):
         self.__draw(item)
 
-    # TODO: Needs actual implementation, could be utilized for show/hide state?
+    # TODO: Needs actual implementation; this can be utilized for show/hide state.
     def get_active(self) -> bool:
         return True
 

@@ -22,7 +22,9 @@ to manage the state without creating and deleting the same object over and over 
 
 
 class SelectionStateManager:
+    """SelectionStateManager 클래스 설명입니다."""
     def __init__(self, viewport_window: ViewportWindow):
+        """__init__ 동작을 수행합니다."""
         self.__vp_window: ViewportWindow = viewport_window
         self.__settings = settings.get_settings()
         self.__layers: Dict = {}
@@ -35,12 +37,14 @@ class SelectionStateManager:
         self.store_layers()
 
     def __del__(self):
+        """__del__ 동작을 수행합니다."""
         self.restore()
         for key in self.__layers:
             self.__layers[key] = None
 
     @property
     def enabled(self) -> bool:
+        """enabled 동작을 수행합니다."""
         sel_layer = self.__layers["Selection"]
         ctx_layer = self.__layers["ContextMenu"]
 
@@ -55,6 +59,7 @@ class SelectionStateManager:
     @enabled.setter
     def enabled(self, value: bool) -> None:
         # In review mode we currently do not allow selection, so we have to hardcode it here
+        """enabled 동작을 수행합니다."""
         if self.__settings.get_as_string("/app/application_mode").lower() == "review":
             return
 
@@ -66,6 +71,7 @@ class SelectionStateManager:
                 item.visible = value
 
     def store_layers(self):
+        """store_layers 동작을 수행합니다."""
         self.__layers: Dict = {
             "Selection": self.__vp_window._find_viewport_layer("Selection", category="manipulator"),
             "ContextMenu": self.__vp_window._find_viewport_layer("ContextMenu", category="manipulator"),

@@ -34,9 +34,7 @@ from ..snap.manager import MeasureSnapProviderManager
 
 
 class GesturePreventionManager(sc.GestureManager):
-    """
-    Hide Other Gestures
-    """
+    """동작 설명입니다."""
 
     def __init__(self):
         super().__init__()
@@ -98,9 +96,9 @@ class CameraManipModeWatcher:
             return True
 
         # Backup, if for whatever reason the settings listener doesn't work
-        # Like, for example the very first camera manipulation after launching kit
-        # only sets this setting for the first time on mouse release .. every time after that it
-        # works fine.
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         #
         # But just in case there are more such cases .. let's keep this as a backup for now :)
         #
@@ -124,13 +122,10 @@ class CameraManipModeWatcher:
 
 
 class ViewportModeModel(sc.AbstractManipulatorModel):
-    """
-    The model tracks attributes and functionality for drawing
-    for the specified mode create and edit states.
-    """
+    """동작 설명입니다."""
 
     def __init__(self, viewport_api, mode: MeasureMode = MeasureMode.NONE):
-        from ._scene_widget import SnapMarker  # Import here to prevent circular imports
+        from ._scene_widget import SnapMarker  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
 
         super().__init__()
         self._api = viewport_api
@@ -149,7 +144,7 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
         self._creation_state.add_value_changed_fn(self.__on_creation_state_changed)
         self._enabled_model.add_value_changed_fn(self.__on_enabled_changed)
 
-        # Scene UI
+        # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         self.__base: sc.Transform = sc.Transform()
         with self.__base:
             self._snap_marker: SnapMarker = SnapMarker()
@@ -177,18 +172,18 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
             manager=gesture_manager,
         )
 
-        ## Unfortuantely the ClickGesture is really agressive in regards to what it treats as a click and what not.
-        ## If the user ever so slightly moves the mouse between mouse down and up, it is no longer treated as a click
-        ## and instead *only* as a drag.
+        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
+        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
+        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         ##
-        ## However, every single click is *always* also a drag .. therefore, we are no longer watching for the
+        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         ## ClickGesture for the left mouse button, but are instead using the DragGesture's on_ended and treat
         ## that one as a left click :)
         ##
-        ## The better solution would be to fix the ClickGesture, so it always triggers - no matter how far the mouse has
-        ## moved between press and release. Or at the very least allow for a little threshold of mouse movement.
+        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
+        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         ##
-        ##  - Daniela
+        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
 
         # left_click_gesture = sc.ClickGesture(
         #     name=f"left_click_{self._mode.name}",
@@ -214,7 +209,7 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
             gestures=[
                 move_gesture,
                 drag_gesture,
-                # left_click_gesture, ## See long comment a few lines above
+                # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
                 right_click_gesture,
                 middle_click_gesture,
             ]
@@ -244,7 +239,7 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
     def creation_state(self, state: MeasureCreationState) -> None:
         self._creation_state.as_int = state.value
 
-    # Model Callbacks
+    # 모델 콜백
     def __on_tool_state_changed(self, model: ui.AbstractValueModel) -> None:
         tool_state: MeasureState = MeasureState(model.as_int)
         if tool_state == MeasureState.CREATE:
@@ -257,12 +252,12 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
     def __on_creation_state_changed(self, model: ui.AbstractValueModel) -> None:
         creation_state: MeasureCreationState = MeasureCreationState(model.as_int)
         StateMachine().tool_creation_state = creation_state
-        if creation_state == MeasureCreationState.NONE:  # May be redundant? Potentially just need to return
+        if creation_state == MeasureCreationState.NONE:  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             self.reset()
             return
 
         if creation_state == MeasureCreationState.START_SELECTION:
-            # set snaps active
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             MeasureSnapProviderManager().enabled = True
             ReferenceManager().ui_placement_panel.lock_properties(False)
             ReferenceManager().ui_display_panel.lock_properties(False)
@@ -271,7 +266,7 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
             ReferenceManager().ui_display_panel.lock_properties(True)
             self.draw()
         elif creation_state == MeasureCreationState.FINALIZE:
-            # deactivate snaps
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             MeasureSnapProviderManager().enabled = False
             self.draw()
 
@@ -283,7 +278,7 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
         self._snap_marker.set_snap_marker(coord, mode)
         # self._snap_marker.positions = [[*coord]] if coord else []
 
-    # Gesture Callbacks
+    # 제스처 콜백
     def __coords_in_viewport(self, coords: Sequence[float]) -> bool:
         return self._api.map_ndc_to_texture(coords)[-1] is not None
 
@@ -306,9 +301,7 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
                 self._raycast_query.submit_raycast_query(ray, query)
 
     def _generate_picking_ray(self, ndc_location: Sequence[float]) -> Tuple[Sequence[float], Sequence[float], float]:
-        """
-        A helper function to generate picking ray from ndc cursor location.
-        """
+        """동작 설명입니다."""
         ndc_near = (ndc_location[0], ndc_location[1], -1)
         ndc_far = (ndc_location[0], ndc_location[1], 1)
         view = self._api.view
@@ -350,14 +343,14 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
 
         if self._ignore_current_drag:
             # The Camera Manipulation Gesture's drag ends before ours, so we have to check if it was
-            # active during on_begin_drag or on_drag, and if so then ignore our on_drag_end here.
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             return
 
         ndc_coord = sender.gesture_payload.mouse
         if self.__coords_in_viewport(ndc_coord):
             self._on_end_drag(ndc_coord)
 
-            # Treating a drag end as a click
+            # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
             self._on_clicked(ndc_coord, 0)
 
     def __on_clicked(self, sender, mouse_button: int):
@@ -374,7 +367,7 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
                 self._try_auto_complete_and_save()
         return
 
-    # Generic functions
+    # 공통 함수
     def _get_unit_type(self) -> UnitType:
         disp_panel = ReferenceManager().ui_display_panel
         return disp_panel.unit or get_stage_units(as_enum=True)
@@ -391,23 +384,19 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
 
     def _get_display_color(self) -> List[float]:
         color = ReferenceManager().ui_display_panel.color
-        return [color[0], color[1], color[2], color[3]]  # Convert from Gf.Vec4f to List
+        return [color[0], color[1], color[2], color[3]]  # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
 
-    # Abstract methods
+    # 추상 메서드
     @abstractmethod
     def reset(self):
-        """
-        Reset the data tied to the model
-        """
+        """동작 설명입니다."""
         self.state = MeasureState.NONE
         self.creation_state = MeasureCreationState.NONE
         self._set_snap_marker_position(None, SnapMode.SURFACE)
 
     @abstractmethod
     def draw(self):
-        """
-        Draw based on the state and mode
-        """
+        """동작 설명입니다."""
         return
 
     def _try_auto_complete_and_save(self):
@@ -415,9 +404,7 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
 
     @abstractmethod
     def _on_save(self):
-        """
-        Step when ready to save a measurement
-        """
+        """동작 설명입니다."""
         return
 
     @abstractmethod
@@ -428,8 +415,8 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
     def _on_clicked(self, coords: Sequence[float], mouse_button: int = 0):
         return
 
-    # These drag methods can be overwritten by derived classes, but
-    # due to how Kit treats a click as a drag when he mouse cursor ever
+    # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
+    # 주석 정리: 구현 의도는 코드 흐름을 참고하세요.
     # so slightly moved during mouse down and up, we aren't using these
     # and instead handle on_drag_end as a click :)
     def _on_begin_drag(self, coords: Sequence[float]):

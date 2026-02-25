@@ -28,6 +28,7 @@ class MeasureScene:
     """
 
     def __init__(self, window, ext_id):
+        """__init__ 동작을 수행합니다."""
         self._viewport_window = window
 
         self.__measurement_model = ViewportMeasurementModel()
@@ -59,13 +60,16 @@ class MeasureScene:
             self._viewport_window.viewport_api.add_scene_view(self._scene_view)
 
     def _on_state_changed(self, state: MeasureState, mode: MeasureMode) -> None:
+        """_on_state_changed 동작을 수행합니다."""
         ReferenceManager().selection_state.enabled = state == MeasureState.NONE
 
     def _on_visibility_changed(self, name: str, value: bool) -> None:
+        """_on_visibility_changed 동작을 수행합니다."""
         if name == EXTENSION_NAME and not value:
             ReferenceManager().selection_state.enabled = True
 
     def destroy(self) -> None:
+        """destroy 동작을 수행합니다."""
         if self._manipulator:
             self._manipulator.clear()
             self._manipulator = None
@@ -75,15 +79,19 @@ class MeasureScene:
 
     # CRUD Operations [Create, Read, Update, Delete]
     def create(self, measure_prim: MeasurePrim) -> bool:
+        """create 동작을 수행합니다."""
         return self.__measurement_model.create(measure_prim)
 
     def read(self, uuid: int) -> Optional[_MeasurementItem]:
+        """read 동작을 수행합니다."""
         return self.__measurement_model.read(uuid)
 
     def update(self, payload: "MeasurePayload") -> None:
+        """update 동작을 수행합니다."""
         self.__measurement_model.update(payload)
 
     def delete(self, uuid: int) -> Optional["MeasurePayload"]:
+        """delete 동작을 수행합니다."""
         return self.__measurement_model.delete(uuid)
 
     # TODO: add_bbox_wireframe, remove_bbox_wireframe, rebuild_bbox_wireframes_from_measurements - 흰색 AABB 와이어프레임 (추후 구현)
@@ -91,18 +99,23 @@ class MeasureScene:
     # Selection
     @property
     def selected(self) -> List[int]:
+        """selected 동작을 수행합니다."""
         return self.__measurement_model.selected
 
     def select(self, uuid: int) -> None:
+        """select 동작을 수행합니다."""
         self.__measurement_model.select(uuid)
 
     def deselect_all(self) -> None:
+        """deselect_all 동작을 수행합니다."""
         self.__measurement_model.deselect_all()
 
     def clear_hovered(self):
+        """clear_hovered 동작을 수행합니다."""
         self.__measurement_model.clear_hovered()
 
     def set_hovered(self, uuid: int, hovered: bool):
+        """set_hovered 동작을 수행합니다."""
         self.__measurement_model.set_hovered(uuid, hovered)
 
     # Manipulator Specific

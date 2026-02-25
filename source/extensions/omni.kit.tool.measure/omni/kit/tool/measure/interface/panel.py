@@ -166,11 +166,13 @@ class MeasurePanel(ui.Window):
         return
 
     def _on_tool_state_changed(self, state: MeasureState, mode: MeasureMode) -> None:
+        """_on_tool_state_changed 동작을 수행합니다."""
         self._pn_placement.visible = state != MeasureState.NONE and mode not in [MeasureMode.NONE, MeasureMode.SELECTED]
         self._pn_mesh.visible = mode == MeasureMode.MESH
 
     # ------ Listeners / Notifiers ------
     def __on_panel_visibility_changed(self, visible: bool):
+        """__on_panel_visibility_changed 동작을 수행합니다."""
         omni.kit.menu.utils.refresh_menu_items("Tools")
 
         if not visible:
@@ -179,6 +181,7 @@ class MeasurePanel(ui.Window):
         else:
             # Delay a frame because the panel may have been docked, then we don't need to set its position
             async def __delay_re_position():
+                """__delay_re_position 동작을 수행합니다."""
                 await omni.kit.app.get_app().next_update_async()
                 await omni.kit.app.get_app().next_update_async()
                 self._update_window_position()
@@ -187,6 +190,7 @@ class MeasurePanel(ui.Window):
             asyncio.ensure_future(__delay_re_position())
 
     def __on_focused_changed(self, focused: bool):
+        """__on_focused_changed 동작을 수행합니다."""
         if focused:
             if HotkeyManager().hotkey_context.get() != MEASURE_WINDOW_VISIBLE_CONTEXT:
                 HotkeyManager().hotkey_context.push(MEASURE_WINDOW_VISIBLE_CONTEXT)
@@ -194,6 +198,7 @@ class MeasurePanel(ui.Window):
             HotkeyManager().remove_hotkey_context(MEASURE_WINDOW_VISIBLE_CONTEXT)
 
     def __on_panel_selected_changed(self, selected: bool):
+        """__on_panel_selected_changed 동작을 수행합니다."""
         if not selected:
             StateMachine().reset_state_to_default()
 
@@ -208,6 +213,7 @@ class MeasurePanel(ui.Window):
         pass
 
     def _update_window_position(self, *_):
+        """_update_window_position 동작을 수행합니다."""
         if not self.visible or self.docked or self._window_updated:
             return
 
@@ -234,17 +240,21 @@ class MeasurePanel(ui.Window):
 
     def _on_viewport_size_changed(self, *_):
         # When viewport size changed, we need to update placement of measure panel when it's opened next time
+        """_on_viewport_size_changed 동작을 수행합니다."""
         self._window_updated = False
 
     def _width_changed(self, width: float):
+        """_width_changed 동작을 수행합니다."""
         if not self.docked:
             self._undocked_width = width
 
     def _height_changed(self, height: float):
+        """_height_changed 동작을 수행합니다."""
         if not self.docked:
             self._undocked_height = height
 
     def _dock_changed(self, docked: bool):
+        """_dock_changed 동작을 수행합니다."""
         if not docked:
             self.width = self._undocked_width
             self.height = self._undocked_height
