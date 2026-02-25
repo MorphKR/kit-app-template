@@ -173,17 +173,9 @@ class ViewportModeModel(sc.AbstractManipulatorModel):
         )
 
         #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
-        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
-        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
-        ##
-        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
         ## ClickGesture for the left mouse button, but are instead using the DragGesture's on_ended and treat
         ## that one as a left click :)
         ##
-        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
-        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
-        ##
-        #주석 정리: 구현 의도는 코드 흐름을 참고하세요.
 
         # left_click_gesture = sc.ClickGesture(
         #     name=f"left_click_{self._mode.name}",
