@@ -8,54 +8,49 @@
 # without an express license agreement from NVIDIA CORPORATION or
 # its affiliates is strictly prohibited.
 
+import asyncio
+
 import omni.ext
 import omni.ui as ui
 
-
-# Functions and vars are available to other extensions as usual in python:
-# `morph.capture_and_movie.some_public_function(x)`
-def some_public_function(x: int):
-    """This is a public function that can be called from other extensions."""
-    print(f"[morph.capture_and_movie] some_public_function was called with {x}")
-    return x ** x
+from .capture_image import (
+    capture_active_viewport_to_png,
+    capture_world_first_prim_thumbnail_to_png_async,
+)
 
 
-# Any class derived from `omni.ext.IExt` in the top level module (defined in
-# `python.modules` of `extension.toml`) will be instantiated when the extension
-# gets enabled, and `on_startup(ext_id)` will be called. Later when the
-# extension gets disabled on_shutdown() is called.
 class MyExtension(omni.ext.IExt):
-    """This extension manages a simple counter UI."""
-    # ext_id is the current extension id. It can be used with the extension
-    # manager to query additional information, like where this extension is
-    # located on the filesystem.
+    """Simple UI for viewport capture and /World first-prim thumbnail."""
+
     def on_startup(self, _ext_id):
-        """This is called every time the extension is activated."""
         print("[morph.capture_and_movie] Extension startup")
 
-        self._count = 0
-        self._window = ui.Window(
-            "Create Capture And Moive", width=300, height=300
-        )
+        self._window = ui.Window("Create Capture And Movie", width=560, height=160)
         with self._window.frame:
-            with ui.VStack():
-                label = ui.Label("")
+            with ui.VStack(spacing=8):
+                self._status_label = ui.Label("Capture viewport image or /World first prim thumbnail.")
 
-                def on_click():
-                    self._count += 1
-                    label.text = f"count: {self._count}"
+                def on_click_capture():
+                    path = capture_active_viewport_to_png()
+                    if path:
+                        self._status_label.text = f"Capture complete:\n{path}"
+                    else:
+                        self._status_label.text = "Capture failed (check logs)"
 
-                def on_reset():
-                    self._count = 0
-                    label.text = "empty"
+                async def _do_capture_thumbnail():
+                    self._status_label.text = "Capturing thumbnail... (/World first prim frame)"
+                    path = await capture_world_first_prim_thumbnail_to_png_async(settle_frames=2)
+                    if path:
+                        self._status_label.text = f"Thumbnail capture complete:\n{path}"
+                    else:
+                        self._status_label.text = "Thumbnail capture failed (/World prim or logs)"
 
-                on_reset()
+                def on_click_capture_thumbnail():
+                    asyncio.ensure_future(_do_capture_thumbnail())
 
-                with ui.HStack():
-                    ui.Button("Add", clicked_fn=on_click)
-                    ui.Button("Reset", clicked_fn=on_reset)
+                with ui.HStack(spacing=8):
+                    ui.Button("Capture Viewport Image", clicked_fn=on_click_capture)
+                    ui.Button("Capture /World First Prim Thumbnail", clicked_fn=on_click_capture_thumbnail, width=260)
 
     def on_shutdown(self):
-        """This is called every time the extension is deactivated. It is used
-        to clean up the extension state."""
         print("[morph.capture_and_movie] Extension shutdown")
