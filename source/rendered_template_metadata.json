@@ -71,10 +71,10 @@
             }
         },
         "basic_python_ui_extension": {
-            "morph.multi_viewport": {
+            "morph.pick_filter": {
                 "basic_python_ui_extension": {
-                    "extension_name": "morph.multi_viewport",
-                    "extension_display_name": "multi viewport",
+                    "extension_name": "morph.pick_filter",
+                    "extension_display_name": "Pick Filter",
                     "version": "0.1.0"
                 }
             },
@@ -85,17 +85,24 @@
                     "version": "0.1.0"
                 }
             },
-            "morph.pick_filter": {
-                "basic_python_ui_extension": {
-                    "extension_name": "morph.pick_filter",
-                    "extension_display_name": "Pick Filter",
-                    "version": "0.1.0"
-                }
-            },
             "my_company.usd_loader": {
                 "basic_python_ui_extension": {
                     "extension_name": "my_company.usd_loader",
                     "extension_display_name": "usd_loader",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.multi_viewport": {
+                "basic_python_ui_extension": {
+                    "extension_name": "morph.multi_viewport",
+                    "extension_display_name": "multi viewport",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.capture_and_movie": {
+                "basic_python_ui_extension": {
+                    "extension_name": "morph.capture_and_movie",
+                    "extension_display_name": "Create Capture And Moive",
                     "version": "0.1.0"
                 }
             },
