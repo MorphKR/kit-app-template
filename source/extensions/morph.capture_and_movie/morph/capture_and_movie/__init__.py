@@ -9,3 +9,4 @@
 # its affiliates is strictly prohibited.
 
 from .extension import *
+from .viewport_movie import *

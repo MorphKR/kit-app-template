@@ -11,12 +11,14 @@
 import asyncio
 
 import omni.ext
+import omni.kit.async_engine
 import omni.ui as ui
 
 from .capture_image import (
     capture_active_viewport_to_png,
     capture_world_first_prim_thumbnail_to_png_async,
 )
+from .viewport_movie import ViewportMovieRecorder
 
 
 class MyExtension(omni.ext.IExt):
@@ -24,8 +26,9 @@ class MyExtension(omni.ext.IExt):
 
     def on_startup(self, _ext_id):
         print("[morph.capture_and_movie] Extension startup")
+        self._movie_recorder: ViewportMovieRecorder | None = None
 
-        self._window = ui.Window("Create Capture And Movie", width=560, height=160)
+        self._window = ui.Window("Create Capture And Movie", width=720, height=200)
         with self._window.frame:
             with ui.VStack(spacing=8):
                 self._status_label = ui.Label("Capture viewport image or /World first prim thumbnail.")
@@ -46,11 +49,53 @@ class MyExtension(omni.ext.IExt):
                         self._status_label.text = "Thumbnail capture failed (/World prim or logs)"
 
                 def on_click_capture_thumbnail():
-                    asyncio.ensure_future(_do_capture_thumbnail())
+                    _schedule_coroutine(_do_capture_thumbnail())
+
+                def on_click_start_recording():
+                    if self._movie_recorder and self._movie_recorder.is_recording:
+                        self._status_label.text = "Recording is already in progress."
+                        return
+                    self._movie_recorder = ViewportMovieRecorder(fps=30, file_prefix="viewport_movie")
+                    ok = self._movie_recorder.start()
+                    if ok:
+                        self._status_label.text = "Recording started..."
+                    else:
+                        self._status_label.text = "Failed to start recording (check logs)."
+
+                async def _do_stop_recording():
+                    if not self._movie_recorder:
+                        self._status_label.text = "No active recording."
+                        return
+                    self._status_label.text = "Stopping recording..."
+                    result = await self._movie_recorder.stop_async(encode_mp4=True)
+                    self._movie_recorder = None
+                    if not result:
+                        self._status_label.text = "Recording stop failed (check logs)."
+                        return
+                    if result.mp4_path:
+                        self._status_label.text = f"Recording complete:\n{result.mp4_path}"
+                    else:
+                        self._status_label.text = f"Frames saved:\n{result.frame_dir}"
+
+                def on_click_stop_recording():
+                    _schedule_coroutine(_do_stop_recording())
 
                 with ui.HStack(spacing=8):
                     ui.Button("Capture Viewport Image", clicked_fn=on_click_capture)
                     ui.Button("Capture /World First Prim Thumbnail", clicked_fn=on_click_capture_thumbnail, width=260)
+                    ui.Button("Start Recording", clicked_fn=on_click_start_recording, width=140)
+                    ui.Button("Stop Recording", clicked_fn=on_click_stop_recording, width=140)
 
     def on_shutdown(self):
+        if self._movie_recorder and self._movie_recorder.is_recording:
+            _schedule_coroutine(self._movie_recorder.stop_async(encode_mp4=True))
+            self._movie_recorder = None
         print("[morph.capture_and_movie] Extension shutdown")
+
+
+def _schedule_coroutine(coro):
+    try:
+        loop = asyncio.get_running_loop()
+        return loop.create_task(coro)
+    except RuntimeError:
+        return omni.kit.async_engine.run_coroutine(coro)
