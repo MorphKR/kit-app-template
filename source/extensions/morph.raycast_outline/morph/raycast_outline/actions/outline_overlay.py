@@ -57,26 +57,13 @@ class OutlineOverlay(ViewportEventContext):
 
         events 모듈은 독립적이므로, overlay 관련 로직은 여기서 등록합니다.
         """
-        import omni.usd
-
         def on_hover(prim_path: Optional[str]) -> None:
             if prim_path:
                 self.set_hover_outline(prim_path)
             else:
                 self.clear_hover_outline()
 
-        def on_click(prim_path: Optional[str]) -> None:
-            if prim_path:
-                ctx = omni.usd.get_context()
-                selection = ctx.get_selection()
-                current_paths = list(selection.get_selected_prim_paths())
-                if prim_path not in current_paths:
-                    current_paths.append(prim_path)
-                    selection.set_selected_prim_paths(current_paths, True)
-            self.clear_hover_outline()
-
         manager.register_hover(on_hover)
-        manager.register_click(on_click)
 
     def setup(self, event_manager: Optional[ViewportEventManager] = None) -> bool:
         """

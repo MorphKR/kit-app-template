@@ -23,7 +23,6 @@ from omni.ui import scene as sc
 # 이벤트 핸들러 타입
 # -----------------------------------------------------------------------------
 HoverHandler = Callable[[Optional[str]], None]
-ClickHandler = Callable[[Optional[str]], None]
 
 
 # -----------------------------------------------------------------------------
@@ -87,7 +86,6 @@ class ViewportEventManager:
     def __init__(self, context: ViewportEventContext):
         self._context = context
         self._hover_handlers: List[HoverHandler] = []
-        self._click_handlers: List[ClickHandler] = []
 
     def register_hover(self, handler: HoverHandler) -> None:
         if handler not in self._hover_handlers:
@@ -97,25 +95,12 @@ class ViewportEventManager:
         if handler in self._hover_handlers:
             self._hover_handlers.remove(handler)
 
-    def register_click(self, handler: ClickHandler) -> None:
-        if handler not in self._click_handlers:
-            self._click_handlers.append(handler)
-
-    def unregister_click(self, handler: ClickHandler) -> None:
-        if handler in self._click_handlers:
-            self._click_handlers.remove(handler)
-
     def build_screen(self) -> sc.Screen:
         hover_gesture = sc.HoverGesture(
             name="raycast_outline_hover",
             on_changed_fn=self._on_hover_gesture,
         )
-        click_gesture = sc.ClickGesture(
-            name="raycast_outline_click",
-            mouse_button=0,
-            on_ended_fn=self._on_click_gesture,
-        )
-        return sc.Screen(gestures=[hover_gesture, click_gesture])
+        return sc.Screen(gestures=[hover_gesture])
 
     def _on_hover_gesture(self, sender) -> None:
         viewport_api = self._context.get_viewport_api()
@@ -132,6 +117,13 @@ class ViewportEventManager:
         def raycast_callback(ray, result: omni.kit.raycast.query.RayQueryResult, *args, **kwargs):
             if result.valid:
                 prim_path = result.get_target_usd_path()
+                hit_pos = getattr(result, "hit_position", None)
+                if hit_pos is not None:
+                    try:
+                        x, y, z = float(hit_pos[0]), float(hit_pos[1]), float(hit_pos[2])
+                        print(f"[morph.raycast_outline] hover hit: {prim_path} @ ({x:.6f}, {y:.6f}, {z:.6f})")
+                    except Exception:
+                        print(f"[morph.raycast_outline] hover hit: {prim_path} @ {hit_pos}")
                 self._dispatch_hover(prim_path if prim_path else None)
             else:
                 self._dispatch_hover(None)
@@ -140,38 +132,8 @@ class ViewportEventManager:
         ray = omni.kit.raycast.query.Ray(origin, direction) # Omniverse RTX raycast API
         raycast_query.submit_raycast_query(ray, raycast_callback)
 
-    def _on_click_gesture(self, sender) -> None:
-        viewport_api = self._context.get_viewport_api()
-        raycast_query = self._context.get_raycast_query()
-        if not viewport_api or not raycast_query:
-            return
-
-        ndc_coords = sender.gesture_payload.mouse
-
-        if not _coords_in_viewport(viewport_api, ndc_coords):
-            self._dispatch_click(None)
-            return
-
-        def raycast_callback(ray, result: omni.kit.raycast.query.RayQueryResult, *args, **kwargs):
-            if result.valid:
-                prim_path = result.get_target_usd_path()
-                self._dispatch_click(prim_path if prim_path else None)
-            else:
-                self._dispatch_click(None)
-
-        origin, direction = _generate_picking_ray(viewport_api, ndc_coords)
-        ray = omni.kit.raycast.query.Ray(origin, direction) # Omniverse RTX raycast API
-        raycast_query.submit_raycast_query(ray, raycast_callback)
-
     def _dispatch_hover(self, prim_path: Optional[str]) -> None:
         for handler in self._hover_handlers:
-            try:
-                handler(prim_path)
-            except Exception:
-                pass
-
-    def _dispatch_click(self, prim_path: Optional[str]) -> None:
-        for handler in self._click_handlers:
             try:
                 handler(prim_path)
             except Exception:

@@ -12,12 +12,10 @@ from .viewport_raycast_events import (
     ViewportEventContext,
     ViewportEventManager,
     HoverHandler,
-    ClickHandler,
 )
 
 __all__ = [
     "ViewportEventContext",
     "ViewportEventManager",
     "HoverHandler",
-    "ClickHandler",
 ]
