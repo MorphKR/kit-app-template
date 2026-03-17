@@ -401,6 +401,8 @@ def encode_movie_with_ffmpeg(
         "0",
         "-i",
         input_pattern,
+        "-vf",
+        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
         "-c:v",
         "libx264",
         "-pix_fmt",
