@@ -78,13 +78,13 @@ class MyExtension(omni.ext.IExt):
             try:
                 dep_window = workspace.get_window(name)
                 if dep_window is not None:
-                    return dep_window, name
+                    return dep_window
             except Exception:
                 continue
         return None, None
 
     def _dep_window_visible(self, dep_id: str):
-        dep_window, _ = self._find_dep_window(dep_id)
+        dep_window = self._find_dep_window(dep_id)
         if dep_window is None:
             return None
         return bool(getattr(dep_window, "visible", False))
@@ -94,7 +94,7 @@ class MyExtension(omni.ext.IExt):
             return
 
         try:
-            dep_window, _ = self._find_dep_window(dep_id)
+            dep_window = self._find_dep_window(dep_id)
             if dep_window is None:
                 pass
             else:

@@ -19,7 +19,7 @@ from .outline_settings_ui import build_outline_settings_ui
 # -----------------------------------------------------------------------------
 # 상수
 # -----------------------------------------------------------------------------
-WINDOW_TITLE = "Raycast Outline 설정"
+WINDOW_TITLE = "Raycast Outline"
 MENU_PATH = "Window"
 WINDOW_WIDTH = 320
 WINDOW_HEIGHT = 220

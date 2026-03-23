@@ -17,6 +17,7 @@ from typing import Callable, List, Optional, Sequence, Tuple
 
 import omni.kit.raycast.query
 from omni.ui import scene as sc
+from pxr import Sdf, UsdGeom, UsdShade
 
 from ..color_sampling import sample_hit_texture_color
 
@@ -66,6 +67,19 @@ def _generate_picking_ray(
         (origin[0], origin[1], origin[2]),
         (direction[0], direction[1], direction[2]),
     )
+
+
+def _get_material_diffuse_color( *,viewport_api, prim,) -> Optional[Tuple[float, float, float, float]]:
+    try:
+        binding_api = UsdShade.MaterialBindingAPI(prim)
+        material = binding_api.ComputeBoundMaterial()[0]
+        shader = UsdShade.Shader(UsdShade.Material(material).ComputeSurfaceSource()[0])
+        diffuse = shader.GetInput("diffuseColor").Get()
+        r, g, b = diffuse[:3]
+        a = diffuse[3] if len(diffuse) > 3 else 1.0
+        return (float(r), float(g), float(b), float(a))
+    except Exception:
+        return None
 
 
 # -----------------------------------------------------------------------------
@@ -130,27 +144,33 @@ class ViewportEventManager:
         def raycast_callback(ray, result: omni.kit.raycast.query.RayQueryResult, *args, **kwargs):
             if result.valid:
                 prim_path = result.get_target_usd_path()
-                print("[morph.raycast_outline] hover hit: ", result, "\n")
                 hit_pos = getattr(result, "hit_position", None)
                 if hit_pos is not None:
                     try:
                         x, y, z = float(hit_pos[0]), float(hit_pos[1]), float(hit_pos[2])
-                        print(f"[morph.raycast_outline] hover hit: {prim_path} @ ({x:.6f}, {y:.6f}, {z:.6f})")
-                        face_index = int(getattr(result, "primitive_id", -1))
-                        tex_rgba = sample_hit_texture_color(
-                            viewport_api=viewport_api,
-                            prim_path=prim_path,
-                            hit_pos_world=(x, y, z),
-                            face_index=face_index,
-                        )
-                        if tex_rgba is not None:
-                            r, g, b, a = tex_rgba
-                            print(
-                                "[morph.raycast_outline] texture sample RGBA: "
-                                f"({r:.6f}, {g:.6f}, {b:.6f}, {a:.6f})"
+                        # print(f"[morph.raycast_outline] hover hit: {prim_path} @ ({x:.6f}, {y:.6f}, {z:.6f})")
+                        # `prim_path`를 통해 USD `prim`을 1회만 조회한 뒤,
+                        # `BasisCurves`면 diffuseColor를 읽고, 아니면 Mesh 텍스처 샘플링으로 폴백합니다.
+                        usd_ctx = getattr(viewport_api, "usd_context", None)
+                        stage = usd_ctx.get_stage() if usd_ctx else None
+                        prim = stage.GetPrimAtPath(Sdf.Path(prim_path)) if stage else None
+
+                        if prim and UsdGeom.BasisCurves(prim):
+                            tex_rgba = _get_material_diffuse_color(
+                                viewport_api=viewport_api,
+                                prim=prim,
                             )
+                            print(f"[morph.raycast_outline] basis curves material diffuse color: {tex_rgba}")
                         else:
-                            print("[morph.raycast_outline] texture sample RGBA: <none>")
+                            face_index = int(getattr(result, "primitive_id", -1))
+                            tex_rgba = sample_hit_texture_color(
+                                viewport_api=viewport_api,
+                                prim_path=prim_path,
+                                hit_pos_world=(x, y, z),
+                                face_index=face_index,
+                            )
+                            print(f"[morph.raycast_outline] mesh texture color: {tex_rgba}")
+
                     except Exception:
                         print(f"[morph.raycast_outline] hover hit: {prim_path} @ {hit_pos}")
                 self._dispatch_hover(prim_path if prim_path else None)
