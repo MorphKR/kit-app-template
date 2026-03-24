@@ -13,6 +13,7 @@ import asyncio
 import omni.ext
 import omni.kit.async_engine
 import omni.ui as ui
+from pxr import Gf, UsdGeom
 
 from .capture_image import (
     capture_active_viewport_to_png,
@@ -27,6 +28,9 @@ class MyExtension(omni.ext.IExt):
     def on_startup(self, _ext_id):
         print("[morph.capture_and_movie] Extension startup")
         self._movie_recorder: ViewportMovieRecorder | None = None
+        self._stage_sub = omni.usd.get_context().get_stage_event_stream().create_subscription_to_pop(
+            self._on_stage_event, name="wait_stage"
+        )
 
         self._window = ui.Window("Create Capture And Movie", width=720, height=200)
         with self._window.frame:
@@ -91,6 +95,48 @@ class MyExtension(omni.ext.IExt):
             _schedule_coroutine(self._movie_recorder.stop_async(encode_mp4=True))
             self._movie_recorder = None
         print("[morph.capture_and_movie] Extension shutdown")
+
+    def _on_stage_event(self, event):
+        if event.type == int(omni.usd.StageEventType.OPENED):
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                return
+
+            self._create_camera(stage)
+
+            # 한번만 실행
+            self._stage_sub = None
+
+    # 카메라 생성 함수
+    def _create_camera(self, stage):
+        if stage.GetPrimAtPath("/World/CaptureCamera"):
+            return  # 이미 카메라가 존재하면 생성하지 않음
+        camera = UsdGeom.Camera.Define(stage, "/World/CaptureCamera")
+        xform = UsdGeom.XformCommonAPI(camera)
+        xform.SetTranslate(Gf.Vec3d(500, 100, 500))
+        xform.SetRotate((0.0, 45.0, 0.0), UsdGeom.XformCommonAPI.RotationOrderXYZ)
+
+
+    def get_world_position(self, prim):
+        xformable = UsdGeom.Xformable(prim)
+        mat = xformable.ComputeLocalToWorldTransform(0)
+        return mat.ExtractTranslation()
+
+    # 카메라가 특정 위치를 바라보도록 설정하는 함수
+    def _look_at(self, target_pos):
+        camera = omni.usd.get_context().get_stage().GetPrimAtPath("/World/CaptureCamera")
+        if not camera:
+            print("Capture camera not found, cannot set look_at.")
+            return
+        xform = UsdGeom.Xformable(camera)
+        mat = Gf.Matrix4d()
+        mat.SetLookAt(
+            self.get_world_position(camera),
+            self.get_world_position(target_pos),
+            Gf.Vec3d(0, 1, 0),
+        )
+        xform.ClearXformOpOrder()
+        xform.AddTransformOp().Set(mat)
 
 
 def _schedule_coroutine(coro):
