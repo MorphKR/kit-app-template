@@ -18,16 +18,26 @@ from pxr import Gf, UsdGeom
 from .capture_image import (
     capture_active_viewport_to_png,
     capture_world_first_prim_thumbnail_to_png_async,
+    _buffer_to_bytes,
 )
 from .viewport_movie import ViewportMovieRecorder
-
+import omni.kit.viewport.utility as vp_utils
+import omni.kit.viewport.actions as vp_actions
+import numpy as np
+from PIL import Image
+from omni.kit.viewport.utility import (
+    capture_viewport_to_buffer,
+    next_viewport_frame_async
+)
 
 class MyExtension(omni.ext.IExt):
     """Simple UI for viewport capture and /World first-prim thumbnail."""
 
     def on_startup(self, _ext_id):
         print("[morph.capture_and_movie] Extension startup")
+
         self._movie_recorder: ViewportMovieRecorder | None = None
+        self._capture_viewport_window = None
         self._stage_sub = omni.usd.get_context().get_stage_event_stream().create_subscription_to_pop(
             self._on_stage_event, name="wait_stage"
         )
@@ -38,12 +48,33 @@ class MyExtension(omni.ext.IExt):
                 self._status_label = ui.Label("Capture viewport image or /World first prim thumbnail.")
 
                 def on_click_capture():
+                    asyncio.ensure_future(_do_capture_viewport())
+
+                async def _do_capture_viewport():
+                    if not self._capture_viewport_window:
+                        self._capture_viewport_window = vp_utils.create_viewport_window(
+                            name="CaptureViewport",
+                            width=1024,
+                            height=1024,
+                            position_x=-10000,
+                            position_y=-10000,
+                            camera_path="/World/CaptureCamera",
+                        )
+
+                    # 창 생성 직후 내부 viewport 초기화를 위해 한 프레임 대기
+
+                    await self.capture_viewport_png(
+                        self._capture_viewport_window.viewport_api,
+                        "D:/Users/JeongGuHyeon/kit-app-template/captures/viewport_capture.png",
+                    )
+
+                    """
                     path = capture_active_viewport_to_png()
                     if path:
                         self._status_label.text = f"Capture complete:\n{path}"
                     else:
                         self._status_label.text = "Capture failed (check logs)"
-
+                    """
                 async def _do_capture_thumbnail():
                     self._status_label.text = "Capturing thumbnail... (/World first prim frame)"
                     path = await capture_world_first_prim_thumbnail_to_png_async(settle_frames=2)
@@ -59,8 +90,20 @@ class MyExtension(omni.ext.IExt):
                     if self._movie_recorder and self._movie_recorder.is_recording:
                         self._status_label.text = "Recording is already in progress."
                         return
-                    self._movie_recorder = ViewportMovieRecorder(fps=30, file_prefix="viewport_movie")
-                    ok = self._movie_recorder.start()
+                    if not self._capture_viewport_window:
+                        self._capture_viewport_window = vp_utils.create_viewport_window(
+                            name="CaptureViewport",
+                            width=1024,
+                            height=1024,
+                            position_x=-10000,
+                            position_y=-10000,
+                            camera_path="/World/CaptureCamera",
+                        )
+                    self._movie_recorder = ViewportMovieRecorder(
+                        fps=30,
+                        file_prefix="viewport_movie",
+                    )
+                    ok = self._movie_recorder.start(self._capture_viewport_window.viewport_api)
                     if ok:
                         self._status_label.text = "Recording started..."
                     else:
@@ -104,6 +147,8 @@ class MyExtension(omni.ext.IExt):
 
             self._create_camera(stage)
 
+
+
             # 한번만 실행
             self._stage_sub = None
 
@@ -137,6 +182,33 @@ class MyExtension(omni.ext.IExt):
         )
         xform.ClearXformOpOrder()
         xform.AddTransformOp().Set(mat)
+
+
+    async def capture_viewport_png(self, viewport_api, file_path):
+
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+
+        def on_capture(buffer, buffer_size, width, height, byte_format):
+            # buffer → numpy
+            raw = _buffer_to_bytes(buffer, buffer_size)
+            array = np.frombuffer(raw, dtype=np.uint8)
+            array = array.reshape(height, width, 4)
+
+            # RGBA → PNG 저장
+            img = Image.fromarray(array, "RGBA")
+            img.save(file_path)
+
+            if not future.done():
+                future.set_result(True)
+
+        # capture 요청
+        capture_viewport_to_buffer(viewport_api, on_capture)
+
+        # viewport render 완료 대기
+        await next_viewport_frame_async(viewport_api)
+
+        await future
 
 
 def _schedule_coroutine(coro):

@@ -13,7 +13,6 @@ Viewport 동영상 캡처/인코딩 유틸.
 """
 
 import asyncio
-import contextlib
 import datetime
 import glob
 import os
@@ -68,7 +67,7 @@ class ViewportMovieRecorder:
         """현재 녹화 진행 중인지 여부."""
         return self._running
 
-    def start(self) -> bool:
+    def start(self, viewport_api=None) -> bool:
         """
         녹화를 시작한다.
         - 활성 viewport 를 찾아서 `_record_loop()` 코루틴을 스케줄하고, 프레임 디렉터리를 준비한다.
@@ -77,7 +76,7 @@ class ViewportMovieRecorder:
         if self._running:
             return False
 
-        viewport_api = _get_active_viewport_api()
+        viewport_api = viewport_api or _get_active_viewport_api()
         if not viewport_api:
             carb.log_warn("[capture_and_movie] failed to get active viewport")
             return False
@@ -289,6 +288,31 @@ def _resolve_ffmpeg_exe() -> str | None:
     return shutil.which("ffmpeg")
 
 
+def _cleanup_png_frames(frame_dir: str, file_prefix: str, *, max_retries: int = 10, retry_delay: float = 0.05) -> int:
+    """
+    PNG 프레임 정리 유틸.
+
+    Windows 환경에서 ffmpeg 종료 직후 파일 핸들이 잠시 남아 삭제가 실패할 수 있어
+    짧게 재시도한 뒤 최종적으로 남은 파일 개수를 반환한다.
+    """
+    pattern = os.path.join(frame_dir, f"{file_prefix}_*.png")
+    remaining = sorted(glob.glob(pattern))
+    for _ in range(max_retries):
+        if not remaining:
+            return 0
+        next_remaining: list[str] = []
+        for path in remaining:
+            try:
+                os.remove(path)
+            except Exception:
+                next_remaining.append(path)
+        if not next_remaining:
+            return 0
+        remaining = next_remaining
+        time.sleep(retry_delay)
+    return len(remaining)
+
+
 async def _capture_frame_to_file_async(viewport_api, file_path: str) -> bool:
     """
     주어진 viewport 에서 단일 프레임을 파일로 캡처하고, 완료될 때까지 비동기로 대기.
@@ -298,6 +322,7 @@ async def _capture_frame_to_file_async(viewport_api, file_path: str) -> bool:
         cap = vp_utils.capture_viewport_to_file(viewport_api, file_path, is_hdr=False)
         if hasattr(cap, "wait_for_result"):
             # Reduce extra wait to improve real capture fps.
+            # 렌더링 + GPU->CPU readback + PNG 인코딩/파일쓰기 + Kit 업데이트 대기 시간이 있음
             await cap.wait_for_result(completion_frames=1)
         else:
             await omni.kit.app.get_app().next_update_async()
@@ -424,9 +449,13 @@ def encode_movie_with_ffmpeg(
             carb.log_info(f"[capture_and_movie] ffmpeg stderr:\n{proc.stderr}")
         carb.log_info(f"[capture_and_movie] mp4 encoding completed: {output_mp4_path}")
         if cleanup_input_frames:
-            for f in frames:
-                with contextlib.suppress(Exception):
-                    os.remove(f)
+            remaining_count = _cleanup_png_frames(frame_dir, file_prefix)
+            if remaining_count:
+                carb.log_warn(
+                    f"[capture_and_movie] some input frames could not be removed after retries: {remaining_count}"
+                )
+            else:
+                carb.log_info("[capture_and_movie] input frames cleanup completed")
         return output_mp4_path
     except subprocess.CalledProcessError as e:
         carb.log_error(
