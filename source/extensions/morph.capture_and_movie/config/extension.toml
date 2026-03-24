@@ -23,6 +23,8 @@ repository = "https://github.com/NVIDIA-Omniverse/kit-app-template"  # URL of th
 
 [dependencies]
 "omni.kit.uiapp" = {}
+"omni.kit.capture.viewport" = {}
+"omni.kit.renderer.capture" = {}
 
 
 [settings]
