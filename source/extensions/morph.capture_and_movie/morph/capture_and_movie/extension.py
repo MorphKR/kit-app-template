@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+﻿# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 #
 # NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
@@ -15,19 +15,18 @@ import omni.kit.async_engine
 import omni.ui as ui
 from pxr import Gf, UsdGeom
 
-from .capture_image import (
-    capture_active_viewport_to_png,
-    capture_world_first_prim_thumbnail_to_png_async,
-    _buffer_to_bytes,
-)
+from .capture_image import _buffer_to_bytes
+
+import os
+import datetime
+
 from .viewport_movie import ViewportMovieRecorder
 import omni.kit.viewport.utility as vp_utils
-import omni.kit.viewport.actions as vp_actions
 import numpy as np
 from PIL import Image
 from omni.kit.viewport.utility import (
     capture_viewport_to_buffer,
-    next_viewport_frame_async
+    next_viewport_frame_async,
 )
 
 class MyExtension(omni.ext.IExt):
@@ -37,10 +36,16 @@ class MyExtension(omni.ext.IExt):
         print("[morph.capture_and_movie] Extension startup")
 
         self._movie_recorder: ViewportMovieRecorder | None = None
-        self._capture_viewport_window = None
-        self._stage_sub = omni.usd.get_context().get_stage_event_stream().create_subscription_to_pop(
-            self._on_stage_event, name="wait_stage"
-        )
+        self._capture_vw = None
+        self._capture_viewport_api = None
+
+        if not omni.usd.get_context().get_stage():
+            self._stage_sub = omni.usd.get_context().get_stage_event_stream().create_subscription_to_pop(
+                self._on_stage_event, name="wait_stage"
+            )
+        else:
+            event = type("StageEvent", (), {"type": int(omni.usd.StageEventType.OPENED)})()
+            self._on_stage_event(event)  # 이미 스테이지가 열려있으면 바로 실행
 
         self._window = ui.Window("Create Capture And Movie", width=720, height=200)
         with self._window.frame:
@@ -48,62 +53,33 @@ class MyExtension(omni.ext.IExt):
                 self._status_label = ui.Label("Capture viewport image or /World first prim thumbnail.")
 
                 def on_click_capture():
-                    asyncio.ensure_future(_do_capture_viewport())
+                     asyncio.ensure_future(_do_capture_viewport())
 
                 async def _do_capture_viewport():
-                    if not self._capture_viewport_window:
-                        self._capture_viewport_window = vp_utils.create_viewport_window(
-                            name="CaptureViewport",
-                            width=1024,
-                            height=1024,
-                            position_x=-10000,
-                            position_y=-10000,
-                            camera_path="/World/CaptureCamera",
-                        )
+                    self._create_capture_viewport()
+                    file_path = os.path.join(
+                        os.path.join(os.getcwd(), "captures"),
+                        f"viewport_capture_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png",)
+                    await self.capture_viewport_png(self._capture_vw.viewport_api, file_path)
 
-                    # 창 생성 직후 내부 viewport 초기화를 위해 한 프레임 대기
+                    try:
+                        self._status_label.text = f"Viewport captured:\n{file_path}"
+                    except Exception as e:
+                        self._status_label.text = f"Capture failed: {e!r}"
 
-                    await self.capture_viewport_png(
-                        self._capture_viewport_window.viewport_api,
-                        "D:/Users/JeongGuHyeon/kit-app-template/captures/viewport_capture.png",
-                    )
+                    #콜백 처리가 필요한 경우, 예를 들어 캡처된 파일 경로를 다른 함수로 전달해야 하는 경우, 아래와 같이 콜백 함수를 정의하여 사용할 수 있습니다.
 
-                    """
-                    path = capture_active_viewport_to_png()
-                    if path:
-                        self._status_label.text = f"Capture complete:\n{path}"
-                    else:
-                        self._status_label.text = "Capture failed (check logs)"
-                    """
-                async def _do_capture_thumbnail():
-                    self._status_label.text = "Capturing thumbnail... (/World first prim frame)"
-                    path = await capture_world_first_prim_thumbnail_to_png_async(settle_frames=2)
-                    if path:
-                        self._status_label.text = f"Thumbnail capture complete:\n{path}"
-                    else:
-                        self._status_label.text = "Thumbnail capture failed (/World prim or logs)"
-
-                def on_click_capture_thumbnail():
-                    _schedule_coroutine(_do_capture_thumbnail())
+                    return file_path
 
                 def on_click_start_recording():
                     if self._movie_recorder and self._movie_recorder.is_recording:
                         self._status_label.text = "Recording is already in progress."
                         return
-                    if not self._capture_viewport_window:
-                        self._capture_viewport_window = vp_utils.create_viewport_window(
-                            name="CaptureViewport",
-                            width=1024,
-                            height=1024,
-                            position_x=-10000,
-                            position_y=-10000,
-                            camera_path="/World/CaptureCamera",
-                        )
-                    self._movie_recorder = ViewportMovieRecorder(
-                        fps=30,
-                        file_prefix="viewport_movie",
-                    )
-                    ok = self._movie_recorder.start(self._capture_viewport_window.viewport_api)
+
+                    self._create_capture_viewport()
+
+                    self._movie_recorder = ViewportMovieRecorder(fps=30, file_prefix="viewport_movie",)
+                    ok = self._movie_recorder.start(self._capture_vw.viewport_api)
                     if ok:
                         self._status_label.text = "Recording started..."
                     else:
@@ -129,7 +105,6 @@ class MyExtension(omni.ext.IExt):
 
                 with ui.HStack(spacing=8):
                     ui.Button("Capture Viewport Image", clicked_fn=on_click_capture)
-                    ui.Button("Capture /World First Prim Thumbnail", clicked_fn=on_click_capture_thumbnail, width=260)
                     ui.Button("Start Recording", clicked_fn=on_click_start_recording, width=140)
                     ui.Button("Stop Recording", clicked_fn=on_click_stop_recording, width=140)
 
@@ -146,8 +121,6 @@ class MyExtension(omni.ext.IExt):
                 return
 
             self._create_camera(stage)
-
-
 
             # 한번만 실행
             self._stage_sub = None
@@ -182,6 +155,23 @@ class MyExtension(omni.ext.IExt):
         )
         xform.ClearXformOpOrder()
         xform.AddTransformOp().Set(mat)
+
+    def _create_capture_viewport(self):
+        if self._capture_vw:
+            return
+
+        self._capture_vw = vp_utils.create_viewport_window(
+            name="CaptureViewport",
+            width=1024,
+            height=1024,
+            position_x=-5000,
+            position_y=-5000,
+            camera_path="/World/CaptureCamera",
+        )
+
+        self._capture_vw.viewport_api.fill_frame = False
+        self._capture_vw.viewport_api.resolution = (1024, 1024)
+        self._capture_vw.visible = False
 
 
     async def capture_viewport_png(self, viewport_api, file_path):
