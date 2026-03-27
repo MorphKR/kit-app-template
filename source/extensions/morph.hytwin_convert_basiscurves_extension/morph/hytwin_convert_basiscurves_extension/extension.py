@@ -1,36 +1,29 @@
+﻿import asyncio
+
 import omni.ext
+import omni.kit.app
 import omni.ui as ui
 import omni.usd
-import omni.kit.app
-from pxr import Usd, UsdGeom, Gf, Vt, Sdf, UsdShade
-import asyncio
 
+from pxr import Usd, UsdGeom, Sdf
 
-# 이 확장은 사용자가 USD 경로를 입력하면 해당 파일을 현재 USD stage에 reference로 불러온 뒤,
-# 새로 생긴 `UsdGeom.BasisCurves` prim들을 "clean" prim으로 변환(geometry/xform/material 복사)합니다.
-# 변환 로직은 `_build_clean_curve_once()`에서 단일 prim 단위로 수행합니다.
-
-# True:
-#   source prim을 제거하고 같은 경로에 clean prim을 생성
-# False:
-#   source prim 기준으로 "{source_path}_Clean" clean prim 생성
-REPLACE_SOURCE_WITH_CLEAN = False
 
 class ConvertBasisCurvesExtension(omni.ext.IExt):
     def on_startup(self, _ext_id):
-        # UI/상태 초기화
         self._usd_context = omni.usd.get_context()
+
         self._window = None
         self._asset_path_field = None
         self._target_path_field = None
         self._status_label = None
+
         self._import_task = None
         self._is_shutting_down = False
+
         self._build_ui()
         print("[ConvertBasisCurvesExtension] startup")
 
     def on_shutdown(self):
-        # 실행 중인 비동기 작업을 중단하고 UI/참조를 해제
         self._is_shutting_down = True
 
         if self._import_task and not self._import_task.done():
@@ -44,15 +37,16 @@ class ConvertBasisCurvesExtension(omni.ext.IExt):
         self._target_path_field = None
         self._status_label = None
         self._usd_context = None
+
         print("[ConvertBasisCurvesExtension] shutdown")
 
     def _build_ui(self):
-        # 확장 UI: 경로 입력 + "Import And Convert" 버튼
         self._window = ui.Window("BasisCurves Import Converter", width=560, height=180)
         with self._window.frame:
-            with ui.VStack(spacing=8, padding=10):
+            with ui.VStack(spacing=8, height=0):
                 ui.Label("USD/USDA/USDC path to import")
                 self._asset_path_field = ui.StringField()
+
                 ui.Label("Target prim path")
                 self._target_path_field = ui.StringField()
                 self._target_path_field.model.set_value("")
@@ -60,80 +54,81 @@ class ConvertBasisCurvesExtension(omni.ext.IExt):
                 self._status_label = ui.Label("")
 
                 ui.Button(
-                    "Import And Convert",
+                    "Import With Purpose Override",
                     height=28,
-                    clicked_fn=lambda: asyncio.ensure_future(self._on_click_import_and_convert()),
+                    clicked_fn=lambda: asyncio.ensure_future(self._on_click_import()),
                 )
 
-    async def _on_click_import_and_convert(self):
-        # 버튼 연타 방지: 이미 수행 중이면 상태만 갱신
+    async def _on_click_import(self):
         if self._import_task and not self._import_task.done():
             self._set_status("Already running. Wait for current import.")
             return
-        self._import_task = asyncio.ensure_future(self._import_and_convert())
 
-    async def _import_and_convert(self):
+        self._import_task = asyncio.ensure_future(self._import_with_pre_authored_override())
+
+    async def _import_with_pre_authored_override(self):
         try:
-            # 입력값 읽기/정규화
             asset_path = self._asset_path_field.model.get_value_as_string().strip()
             target_path = self._target_path_field.model.get_value_as_string().strip()
+
             if not target_path:
                 target_path = self._suggest_import_target_path(asset_path)
 
-            # 입력 검증(파일 확장자)
             if not asset_path or not asset_path.lower().endswith((".usd", ".usda", ".usdc")):
                 self._set_status("Invalid import path. Use .usd/.usda/.usdc")
                 return
 
-            # 현재 stage 존재 여부 확인
             stage = self._usd_context.get_stage()
             if not stage:
                 self._set_status("No stage opened.")
                 return
 
-            # 임포트 전/후 비교를 위해 변환 대상 prim 경로를 스냅샷
-            before_paths = set(self._collect_basis_curve_paths(stage))
             import_prim_path = self._make_unique_prim_path(stage, target_path)
 
-            # stage에 reference를 걸기 위한 컨테이너 Xform prim 생성
-            import_prim = UsdGeom.Xform.Define(stage, import_prim_path).GetPrim()
-            import_prim.GetReferences().AddReference(asset_path)
+            # source USD를 별도로 열어서 defaultPrim 기준 BasisCurves 경로를 먼저 수집
+            source_info = self._collect_source_basiscurve_info(asset_path)
+            if not source_info["ok"]:
+                self._set_status(source_info["message"])
+                return
+
+            relative_curve_paths = source_info["relative_curve_paths"]
+            default_prim_path = source_info["default_prim_path"]
+
+            self._set_status(
+                f"Found {len(relative_curve_paths)} BasisCurves in source "
+                f"(defaultPrim={default_prim_path})"
+            )
+
+            # import 전에 현재 stage에 override prim들을 미리 작성
+            self._pre_author_purpose_overrides(
+                stage=stage,
+                import_root_path=import_prim_path,
+                relative_curve_paths=relative_curve_paths,
+            )
+
+            # reference container prim 생성
+            import_root_prim = UsdGeom.Xform.Define(stage, import_prim_path).GetPrim()
+
+            # 이제 reference 추가
+            import_root_prim.GetReferences().AddReference(asset_path)
             self._set_status(f"Imported reference: {asset_path} -> {import_prim_path}")
 
-            # reference 로딩/구성 완료까지 프레임 단위로 대기하면서,
-            # "새로 생긴" BasisCurves를 탐지합니다.
+            # 합성 완료 대기 후 검증
             app = omni.kit.app.get_app()
-            new_paths = []
             for _ in range(20):
                 await app.next_update_async()
                 if self._is_shutting_down:
                     return
 
-                current_paths = set(self._collect_basis_curve_paths(stage))
-                candidates = sorted(p for p in (current_paths - before_paths) if p.startswith(import_prim_path))
-                if candidates:
-                    new_paths = candidates
-                    break
+                current_paths = self._collect_basis_curve_paths_under(stage, import_prim_path)
+                if current_paths:
+                    self._set_status(
+                        f"Import done. BasisCurves={len(current_paths)}, "
+                        f"purpose override authored before reference."
+                    )
+                    return
 
-            if not new_paths:
-                self._set_status("No new BasisCurves found in imported file.")
-                return
-
-            # 탐지된 각 source prim을 clean prim으로 1회 변환
-            updated_count = 0
-            for source_path in new_paths:
-                ok = self._build_clean_curve_once(
-                    stage=stage,
-                    source_path=source_path,
-                    clean_path=self._make_clean_path(source_path),
-                    replace_source=REPLACE_SOURCE_WITH_CLEAN,
-                )
-                if ok:
-                    updated_count += 1
-
-            self._set_status(
-                f"Import done. New BasisCurves={len(new_paths)}, converted={updated_count}"
-            )
+            self._set_status("Import completed, but no BasisCurves were found under target path.")
         except asyncio.CancelledError:
             pass
         except Exception as e:
@@ -141,19 +136,117 @@ class ConvertBasisCurvesExtension(omni.ext.IExt):
         finally:
             self._import_task = None
 
-    def _collect_basis_curve_paths(self, stage: Usd.Stage):
-        # stage traversal로 현재 존재하는 BasisCurves prim path 수집
+    def _collect_source_basiscurve_info(self, asset_path: str):
+        """
+        source USD를 현재 stage와 별도로 열어서:
+        - defaultPrim 경로
+        - defaultPrim 기준 BasisCurves 상대 경로 목록
+        을 반환합니다.
+
+        AddReference(asset_path) 는 보통 source layer의 defaultPrim을
+        target prim에 합성하므로, import 전에 override 경로를 정확히 예측하려면
+        defaultPrim 기준 상대 경로가 필요합니다.
+        """
+        try:
+            src_stage = Usd.Stage.Open(asset_path)
+        except Exception as e:
+            return {
+                "ok": False,
+                "message": f"Failed to open source USD: {e}",
+                "default_prim_path": None,
+                "relative_curve_paths": [],
+            }
+
+        if not src_stage:
+            return {
+                "ok": False,
+                "message": "Failed to open source USD.",
+                "default_prim_path": None,
+                "relative_curve_paths": [],
+            }
+
+        default_prim = src_stage.GetDefaultPrim()
+        if not default_prim or not default_prim.IsValid():
+            return {
+                "ok": False,
+                "message": "Source USD has no defaultPrim. Cannot pre-map referenced BasisCurves paths reliably.",
+                "default_prim_path": None,
+                "relative_curve_paths": [],
+            }
+
+        default_prim_path = str(default_prim.GetPath())
+        relative_curve_paths = []
+
+        for prim in src_stage.Traverse():
+            if not prim or not prim.IsValid() or not prim.IsA(UsdGeom.BasisCurves):
+                continue
+
+            prim_path = str(prim.GetPath())
+
+            # reference target path 매핑:
+            # source defaultPrim 자체는 import_root_path 로 합성되고,
+            # 그 자식들은 import_root_path/<suffix> 로 들어옵니다.
+            if prim_path == default_prim_path:
+                relative_curve_paths.append("")
+            elif prim_path.startswith(default_prim_path + "/"):
+                suffix = prim_path[len(default_prim_path):]
+                relative_curve_paths.append(suffix)
+
+        return {
+            "ok": True,
+            "message": "ok",
+            "default_prim_path": default_prim_path,
+            "relative_curve_paths": relative_curve_paths,
+        }
+
+    def _pre_author_purpose_overrides(self, stage: Usd.Stage, import_root_path: str, relative_curve_paths):
+        edit_layer = stage.GetEditTarget().GetLayer()
+        if not edit_layer:
+            raise RuntimeError("No editable layer found for pre-authoring purpose overrides.")
+
+        for rel_path in relative_curve_paths:
+            composed_path = import_root_path if rel_path == "" else f"{import_root_path}{rel_path}"
+
+            prim_spec = Sdf.CreatePrimInLayer(edit_layer, composed_path)
+            if prim_spec is None:
+                raise RuntimeError(f"Failed to create over prim spec for {composed_path}")
+
+            # over spec 유지
+            prim_spec.specifier = Sdf.SpecifierOver
+
+            # purpose: uniform token = "default"
+            attr_spec = prim_spec.attributes.get("purpose")
+            if attr_spec is None:
+                attr_spec = Sdf.AttributeSpec(
+                    prim_spec,
+                    "purpose",
+                    Sdf.ValueTypeNames.Token,
+                    variability=Sdf.VariabilityUniform,
+                )
+
+            attr_spec.default = "default"
+
+            print(
+                "[ConvertBasisCurvesExtension] pre-authored purpose=default "
+                f"for future imported prim: {composed_path}"
+            )
+
+    def _collect_basis_curve_paths_under(self, stage: Usd.Stage, root_path: str):
         paths = []
         for prim in stage.Traverse():
-            if prim and prim.IsValid() and prim.IsA(UsdGeom.BasisCurves):
-                paths.append(str(prim.GetPath()))
+            if not prim or not prim.IsValid() or not prim.IsA(UsdGeom.BasisCurves):
+                continue
+
+            prim_path = str(prim.GetPath())
+            if prim_path == root_path or prim_path.startswith(root_path + "/"):
+                paths.append(prim_path)
         return paths
 
     def _make_unique_prim_path(self, stage: Usd.Stage, base_path: str):
-        # 같은 stage에서 target 경로가 충돌하면 suffix를 붙여 유일 경로 생성
         base = base_path if base_path.startswith("/") else f"/{base_path}"
         candidate = base
         index = 1
+
         while True:
             prim = stage.GetPrimAtPath(candidate)
             if not prim or not prim.IsValid():
@@ -161,14 +254,7 @@ class ConvertBasisCurvesExtension(omni.ext.IExt):
             candidate = f"{base}_{index}"
             index += 1
 
-    def _set_status(self, text: str):
-        # UI label + 콘솔 출력 동시 반영
-        if self._status_label:
-            self._status_label.text = text
-        print(f"[ConvertBasisCurvesExtension] {text}")
-
     def _suggest_import_target_path(self, asset_path: str):
-        # asset 파일명(경로/확장자 제거) 기반으로 /World/<Name> 제안
         base_name = "ImportedUsd"
         if asset_path:
             candidate = asset_path.replace("\\", "/").rstrip("/")
@@ -184,196 +270,13 @@ class ConvertBasisCurvesExtension(omni.ext.IExt):
                     else:
                         safe.append("_")
                 base_name = "".join(safe).strip("_") or base_name
+
         return f"/World/{base_name}"
 
-    def _make_clean_path(self, source_path: str):
-        # source_path_/_clean naming 규칙
-        return f"{source_path}_Clean"
-
-    def _build_clean_curve_once(
-        self,
-        stage: Usd.Stage,
-        source_path: str,
-        clean_path: str,
-        replace_source: bool = False,
-    ) -> bool:
-        # 단일 BasisCurves prim을 "clean" prim으로 복사/변환합니다.
-        # - geometry(points/counts/attrs) 복사
-        # - normals는 새로 불일치가 생길 수 있으므로 authored value를 제거
-        # - xform ops 및 bound material(목적별)을 복사
-        src_prim = stage.GetPrimAtPath(source_path)
-        if not src_prim or not src_prim.IsValid() or not src_prim.IsA(UsdGeom.BasisCurves):
-            print(f"[ConvertBasisCurvesExtension] invalid source prim: {source_path}")
-            return False
-
-        src_curves = UsdGeom.BasisCurves(src_prim)
-        points = src_curves.GetPointsAttr().Get()
-        counts = src_curves.GetCurveVertexCountsAttr().Get()
-
-        if not points or not counts:
-            print(f"[ConvertBasisCurvesExtension] source missing points/counts: {source_path}")
-            return False
-
-        # 원본 prim에 바인딩된 material과 xform ops를 그대로 복사하기 위한 정보 수집
-        bound_materials = self._get_bound_materials(src_prim)
-        xform_data = self._read_xform_ops(src_prim)
-
-        # replace_source가 켜져 있으면 source 경로에 덮어쓰기(원본 제거 후 생성),
-        # 그렇지 않으면 별도 clean_path에 생성합니다.
-        dst_path = source_path if replace_source else clean_path
-
-        # replace_source=True 모드에서는 원본을 먼저 제거합니다.
-        if replace_source:
-            removed = stage.RemovePrim(source_path)
-            print(f"[ConvertBasisCurvesExtension] removed source prim={removed} path={source_path}")
-
-        # destination 경로에 이미 prim이 있으면 중복 생성 방지
-        dst_prim_existing = stage.GetPrimAtPath(dst_path)
-        if dst_prim_existing and dst_prim_existing.IsValid():
-            print(f"[ConvertBasisCurvesExtension] destination already exists: {dst_path}")
-            return False
-
-        # 새 BasisCurves prim 생성 후 geometry/attrs 설정
-        dst_curves = UsdGeom.BasisCurves.Define(stage, dst_path)
-        dst_prim = dst_curves.GetPrim()
-
-        # geometry: points/counts는 원본을 그대로 복사
-        dst_curves.CreatePointsAttr(points)
-        dst_curves.CreateCurveVertexCountsAttr(counts)
-        dst_curves.GetTypeAttr().Set(UsdGeom.Tokens.linear)
-        dst_curves.GetWrapAttr().Set(UsdGeom.Tokens.nonperiodic)
-        dst_curves.SetWidthsInterpolation(UsdGeom.Tokens.constant)
-
-        # normals: authored value가 있으면 제거(원본 normals가 clean 변환과 불일치할 수 있음)
-        normals_attr = dst_curves.GetNormalsAttr()
-        if normals_attr and normals_attr.HasAuthoredValue():
-            normals_attr.Clear()
-
-        # extent: points 기반 bbox를 계산해 표시 범위를 맞춥니다.
-        extent = self._compute_extent_from_points_and_widths(points)
-        if extent:
-            dst_curves.GetExtentAttr().Set(extent)
-
-        # display / visibility: 기본 목적(purpose=default)으로 보이게 처리
-        dst_img = UsdGeom.Imageable(dst_prim)
-        dst_img.MakeVisible()
-        dst_img.GetPurposeAttr().Set(UsdGeom.Tokens.default_)
-
-        # xform ops 복사
-        self._apply_xform_ops(dst_prim, xform_data)
-
-        # bound material 복사(목적별 all/preview/full)
-        self._apply_bound_materials(dst_prim, bound_materials)
-        return True
-
-    def _compute_extent_from_points_and_widths(self, points):
-        # widths를 따로 고려하지 않고 points 좌표만으로 extent bbox를 생성합니다.
-        if not points:
-            return None
-
-        min_x = min(float(p[0]) for p in points)
-        min_y = min(float(p[1]) for p in points)
-        min_z = min(float(p[2]) for p in points)
-
-        max_x = max(float(p[0]) for p in points)
-        max_y = max(float(p[1]) for p in points)
-        max_z = max(float(p[2]) for p in points)
-
-        return Vt.Vec3fArray([
-            Gf.Vec3f(min_x, min_y, min_z),
-            Gf.Vec3f(max_x, max_y, max_z),
-        ])
-
-    def _read_xform_ops(self, prim: Usd.Prim):
-        # 원본 prim의 xformOpOrder와 각 op의 (name/type/value)를 읽어서 보관합니다.
-        data = {
-            "order": None,
-            "order_type_name": None,
-            "ops": [],
-        }
-
-        order_attr = prim.GetAttribute("xformOpOrder")
-        if not order_attr or not order_attr.HasAuthoredValue():
-            return data
-
-        data["order"] = order_attr.Get()
-        data["order_type_name"] = order_attr.GetTypeName()
-
-        for op_name in data["order"]:
-            src_attr = prim.GetAttribute(op_name)
-            if not src_attr or not src_attr.IsValid():
-                continue
-
-            data["ops"].append({
-                "name": op_name,
-                "type_name": src_attr.GetTypeName(),
-                "value": src_attr.Get(),
-            })
-
-        return data
-
-    def _apply_xform_ops(self, prim: Usd.Prim, xform_data):
-        # 저장해 둔 xform op들을 목적지 prim에 그대로 재작성합니다.
-        if not xform_data or not xform_data.get("order"):
-            return
-
-        for item in xform_data.get("ops", []):
-            dst_attr = prim.CreateAttribute(item["name"], item["type_name"], custom=False)
-            dst_attr.Set(item["value"])
-
-        order_attr = prim.CreateAttribute(
-            "xformOpOrder",
-            xform_data["order_type_name"],
-            custom=False,
-        )
-        order_attr.Set(xform_data["order"])
-
-    def _get_bound_materials(self, prim: Usd.Prim):
-        # material binding을 목적별(all/preview/full)로 찾아 리스트로 반환합니다.
-        results = []
-
-        binding_api = UsdShade.MaterialBindingAPI(prim)
-        purposes = [
-            UsdShade.Tokens.allPurpose,
-            UsdShade.Tokens.preview,
-            UsdShade.Tokens.full,
-        ]
-
-        for purpose in purposes:
-            try:
-                material, rel = binding_api.ComputeBoundMaterial(purpose)
-            except Exception:
-                material, rel = None, None
-
-            if material and material.GetPrim() and material.GetPrim().IsValid():
-                results.append((purpose, material))
-                print(
-                    f"[ConvertBasisCurvesExtension] found bound material "
-                    f"purpose={purpose} path={material.GetPath()}"
-                )
-
-        return results
-
-    def _apply_bound_materials(self, prim: Usd.Prim, bound_materials):
-        # 목적별로 material binding을 destination prim에 바인딩합니다.
-        if not bound_materials:
-            print("[ConvertBasisCurvesExtension] no bound materials to apply")
-            return
-
-        binding_api = UsdShade.MaterialBindingAPI(prim)
-
-        for purpose, material in bound_materials:
-            try:
-                binding_api.Bind(material, purpose)
-                print(
-                    f"[ConvertBasisCurvesExtension] applied bound material "
-                    f"purpose={purpose} path={material.GetPath()}"
-                )
-            except Exception as e:
-                print(
-                    f"[ConvertBasisCurvesExtension] failed to apply material "
-                    f"purpose={purpose}: {e}"
-                )
+    def _set_status(self, text: str):
+        if self._status_label:
+            self._status_label.text = text
+        print(f"[ConvertBasisCurvesExtension] {text}")
 
 
 # 아래의 """ ... """ 블록은 과거 실험/레거시로 보이는 코드이며 현재는
