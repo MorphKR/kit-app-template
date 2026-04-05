@@ -38,6 +38,7 @@ class MyExtension(omni.ext.IExt):
         self._movie_recorder: ViewportMovieRecorder | None = None
         self._capture_vw = None
         self._capture_viewport_api = None
+        self._camera_buttons_frame = None
 
         if not omni.usd.get_context().get_stage():
             self._stage_sub = omni.usd.get_context().get_stage_event_stream().create_subscription_to_pop(
@@ -47,11 +48,14 @@ class MyExtension(omni.ext.IExt):
             event = type("StageEvent", (), {"type": int(omni.usd.StageEventType.OPENED)})()
             self._on_stage_event(event)  # 이미 스테이지가 열려있으면 바로 실행
 
-        self._window = ui.Window("Create Capture And Movie", width=720, height=200)
+        self._window = ui.Window("Create Capture And Movie", width=720, height=240)
         with self._window.frame:
             with ui.VStack(spacing=8):
-                self._status_label = ui.Label("Capture viewport image or /World first prim thumbnail.")
+                with ui.HStack(spacing=8):
+                    ui.Button("Load Stage Cameras", clicked_fn=self._build_default_prim_camera_buttons, width=170)
+                    self._camera_buttons_frame = ui.Frame()
 
+                self._status_label = ui.Label("Capture viewport image or /World first prim thumbnail.")
                 def on_click_capture():
                      asyncio.ensure_future(_do_capture_viewport())
 
@@ -107,6 +111,45 @@ class MyExtension(omni.ext.IExt):
                     ui.Button("Capture Viewport Image", clicked_fn=on_click_capture)
                     ui.Button("Start Recording", clicked_fn=on_click_start_recording, width=140)
                     ui.Button("Stop Recording", clicked_fn=on_click_stop_recording, width=140)
+
+    def _build_default_prim_camera_buttons(self):
+        if self._camera_buttons_frame is None:
+            return
+        self._camera_buttons_frame.clear()
+
+        stage = omni.usd.get_context().get_stage()
+        if not stage:
+            self._status_label.text = "Stage not found."
+            with self._camera_buttons_frame:
+                ui.Label("No stage")
+            return
+
+        default_prim = stage.GetDefaultPrim()
+        if not default_prim or not default_prim.IsValid():
+            self._status_label.text = "DefaultPrim not found."
+            with self._camera_buttons_frame:
+                ui.Label("No DefaultPrim")
+            return
+
+        camera_prims = [prim for prim in default_prim.GetChildren() if prim.IsA(UsdGeom.Camera)]
+        with self._camera_buttons_frame:
+            with ui.HStack(spacing=6):
+                if not camera_prims:
+                    self._status_label.text = f"No cameras under {default_prim.GetPath()}."
+                    ui.Label("No cameras")
+                    return
+
+                self._status_label.text = f"Loaded {len(camera_prims)} camera button(s)."
+                for camera_prim in camera_prims:
+                    camera_name = camera_prim.GetName()
+                    world_pos = UsdGeom.Xformable(camera_prim).ComputeLocalToWorldTransform(0).ExtractTranslation()
+                    ui.Button(
+                        camera_name,
+                        width=120,
+                        clicked_fn=lambda n=camera_name, x=world_pos[0], y=world_pos[1], z=world_pos[2]: print(
+                            f"[morph.capture_and_movie] camera='{n}', position=({x}, {y}, {z})"
+                        ),
+                    )
 
     def on_shutdown(self):
         if self._movie_recorder and self._movie_recorder.is_recording:
