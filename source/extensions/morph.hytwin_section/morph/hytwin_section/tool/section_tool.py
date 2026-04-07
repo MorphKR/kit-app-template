@@ -18,6 +18,8 @@ from .section_scene import SectionScene
 
 @Singleton
 class SectionTool:
+    # 확장 전역에서 공유하는 섹션 씬 관리자.
+    # 여러 뷰포트가 열려 있는 경우 viewport별 SectionScene을 생성/동기화한다.
     def __init__(self):
         self._scenes = {}
         self._ext_id = None
@@ -28,12 +30,14 @@ class SectionTool:
         self.destroy()
 
     def destroy(self):
+        # 뷰포트 감시를 중지하고 생성된 모든 scene 리소스를 해제한다.
         self._stop_viewport_watch()
         for scene in self._scenes.values():
             scene.destroy()
         self._scenes.clear()
 
     def reset(self):
+        # 모든 viewport scene의 모델 상태를 초기화한다.
         for scene in self._scenes.values():
             scene.refresh()
 
@@ -107,6 +111,7 @@ class SectionTool:
         return filtered
 
     def _sync_viewport_scenes(self):
+        # 현재 보이는 뷰포트 목록과 _scenes를 맞춰 생성/삭제를 동기화한다.
         if not self._ext_id:
             return
 
@@ -117,6 +122,7 @@ class SectionTool:
                 continue
             live_keys.add(key)
             if key not in self._scenes:
+                # 섹션 위젯 prim을 viewport 키 단위로 보장한 뒤 scene을 생성한다.
                 SectionManager().get_section_widget_prim(create_if_not_exist=True, viewport_key=key)
                 self._scenes[key] = SectionScene(self._ext_id, viewport_window=viewport_window, viewport_key=key)
                 carb.log_info(f"[SectionTool] Section scene created for viewport: {key}")
@@ -129,6 +135,7 @@ class SectionTool:
             carb.log_info(f"[SectionTool] Section scene removed for viewport: {key}")
 
     def _start_viewport_watch(self):
+        # 매 프레임 post-update에서 viewport 변화(생성/닫힘/표시)를 감시한다.
         if self._post_update_sub is not None:
             return
         stream = omni.kit.app.get_app().get_update_event_stream()
@@ -143,10 +150,12 @@ class SectionTool:
         self._post_update_sub = None
 
     def _on_post_update(self, _):
+        # 섹션이 표시 상태일 때만 viewport 동기화를 수행해 비용을 줄인다.
         if self._visible:
             self._sync_viewport_scenes()
 
-    # 세션 활성화 시, 배열로 된 뷰포트 윈도우마다 섹션 씬을 생성하여 표시한다. 세션 비활성화 시, 모든 씬을 숨긴다.
+    # 섹션 활성화 시 보이는 모든 viewport에 scene을 붙이고,
+    # 비활성화 시 scene은 유지하되 표시/기즈모만 끈다.
     def set_visibility(self, value: bool, ext_id: str) -> None:
         self._visible = bool(value)
         self._ext_id = ext_id
@@ -161,5 +170,6 @@ class SectionTool:
         self.show_section_gizmo(value)
 
     def show_section_gizmo(self, value: bool):
+        # 모든 viewport scene에 동일한 gizmo 표시 상태를 전달한다.
         for scene in self._scenes.values():
             scene.show_section_gizmo(value)

@@ -90,6 +90,7 @@ class SectionToolWindow(ui.Window):
     def __on_stage_objects_changed(self, notice, stage):
         if not notice:  # pragma: no cover
             return
+        # Stage 패널에서 section 관련 prim이 삭제되면 툴 상태도 즉시 정리한다.
         for path in notice.GetResyncedPaths():
             prim_path = path.GetPrimPath()
             if prim_path in ["/SectionTools", "/SectionTools/Section_Tool_Object"]:
@@ -101,6 +102,7 @@ class SectionToolWindow(ui.Window):
                     SectionTool().set_visibility(False, self._ext_id)
 
     def destroy(self):
+        # 구독/패널 참조를 해제해 창 닫힘 이후 콜백 누수를 방지한다.
         self.visible = False
         SectionManager().set_added_section_callback(None)
         self._stop_dirty_listen()
@@ -191,13 +193,13 @@ class SectionToolWindow(ui.Window):
         self._on_section_enabled()
 
     def _on_stage_closing(self, _):
-        # Hide window
+        # 스테이지 닫힘 시 창을 숨기고 섹션 기능을 비활성화한다.
         self.visible = False
-        # Disable section
         self.enable_section(False)
         self._stop_dirty_listen()
 
     def _on_stage_opened(self, _):
+        # 새 stage 기준으로 SectionManager/SectionTool 상태를 재초기화한다.
         SectionTool().set_visibility(False, self._ext_id)
         SectionManager().refresh()
         SectionTool().reset()
@@ -208,6 +210,7 @@ class SectionToolWindow(ui.Window):
         SectionManager().set_direction(section_direction_top)
 
     def _start_dirty_listen(self):
+        # 설정 변경 구독을 재시작해 UI와 런타임 상태를 동기화한다.
         self._stop_dirty_listen()
 
         self._cut_direction_setting_tp = omni.kit.app.SettingChangeSubscription(
@@ -221,6 +224,7 @@ class SectionToolWindow(ui.Window):
         )
 
     def _stop_dirty_listen(self):
+        # SettingChangeSubscription은 참조 해제로 구독이 정리된다.
         self._update_setting_tp = None
         self._cut_direction_setting_tp = None
         self._manipulator_visibility_setting_tp = None

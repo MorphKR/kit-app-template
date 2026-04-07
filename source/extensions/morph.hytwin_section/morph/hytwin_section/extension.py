@@ -39,6 +39,7 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
         # 실제 창 객체는 최초 표시 시점에 지연 생성한다.
         self._window = None
 
+        # 외부(UI/레이아웃 시스템)에서 창 열기 요청이 들어올 수 있도록 show 콜백을 등록한다.
         ui.Workspace.set_show_window_fn(WINDOW_NAME, partial(self.show_window, None))
         self._toggle_id = ui.Workspace.set_window_visibility_changed_callback(self._visibility_changed_fn)
 
@@ -71,6 +72,7 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
             self._window.destroy()
             self._window = None
 
+        # SectionTool singleton이 잡고 있는 scene/리소스를 정리한다.
         SectionTool().destroy()
 
         settings = carb.settings.get_settings()
@@ -96,6 +98,7 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
                 settings.set_string(CURRENT_TOOL_PATH, "navigation")
 
     def show_window(self, menu, value):
+        # value=True면 창을 생성/표시, False면 이미 생성된 창만 숨긴다.
         if value:
             if not self._window:
                 self._window = SectionToolWindow(WINDOW_NAME, self._ext_id)

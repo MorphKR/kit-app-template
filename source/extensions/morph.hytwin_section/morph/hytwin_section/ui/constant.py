@@ -3,6 +3,7 @@ from omni.kit.widgets.custom import LightColors
 
 from ..common import get_data_path
 
+# 패널/컨트롤 기본 치수
 CONTROL_HEIGHT = 24
 SWITCH_HEIGHT = 28
 SWITCH_WIDTH = 28
@@ -14,10 +15,12 @@ ICON_SIZE = 40
 
 
 class Colors:
+    # 다크 테마 기준 버튼 기본/눌림 색상
     ButtonBackground = ui.color.shade(0xFF23211F, light=LightColors.Button)
     ButtonPressed = ui.color.shade(0xFF787569, light=0xFFA8A8A8)
 
 
+# Section 도구 패널 전용 스타일 맵
 UI_STYLE = {
     "Label": {"color": 0xFF9E9E9E},
     "Label::label": {"color": 0xFF9E9E9E},

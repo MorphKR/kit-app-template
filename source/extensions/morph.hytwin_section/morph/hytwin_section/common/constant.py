@@ -18,9 +18,13 @@ VIEWPORT_APERTURE_COMFORM_POLICY = "/app/hydra/aperture/conform"
 CURRENT_TOOL_PATH = "/app/viewport/currentTool"
 WINDOW_NAME = "Section"
 
+# 기본 컷 방향(Top=true)
 DEFAULT_SECTION_TOP = True
 
+# Stage 창에서 섹션 보조 prim을 숨기기 위한 메타데이터 키
 HIDE_IN_STAGE_WINDOW = "hide_in_stage_window"
+# UI/씬 렌더링에 사용하는 공통 색상 값
 SECTION_COLOR = 0xFFD9A223
 SECTION_HOVER = 0xFFD9A243
+# RTX cutDirection 설정에서 Top 방향을 의미하는 값
 SECTION_DIRECTION_TOP = 1
