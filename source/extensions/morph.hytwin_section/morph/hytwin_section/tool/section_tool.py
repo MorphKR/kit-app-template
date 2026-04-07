@@ -18,6 +18,8 @@ from .section_scene import SectionScene
 
 @Singleton
 class SectionTool:
+    # 모델/씬 객체를 소유하고 확장/윈도우 계층에 노출할
+    # 가시성 토글을 제공하는 얇은 파사드 싱글턴.
     def __init__(self):
         self._model = SectionModel()
         self._scene = None
@@ -45,6 +47,7 @@ class SectionTool:
     def set_visibility(self, value: bool, ext_id: str) -> None:
         if value:
             if not self._scene:
+                # Scene은 활성 뷰포트에 의존하므로 필요 시점에 생성한다.
                 self._scene = SectionScene(ext_id, self._model)
 
         if self._scene:

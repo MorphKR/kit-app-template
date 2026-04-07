@@ -40,6 +40,10 @@ TRANSFORM_OP_SETTING = "/app/transform/operation"
 
 
 class SectionToolWindow(ui.Window):
+    # UI 오케스트레이터:
+    # - 섹션 활성/비활성 설정 제어
+    # - SectionManager 데이터와 SectionTool 기즈모 가시성 연동
+    # - stage 열기/닫기 및 section prim 삭제 이벤트 대응
     def __init__(self, title: str, ext_id: str):
         super().__init__(title, resizable=True, padding_x=8, padding_y=8, auto_resize=True)
 
@@ -70,7 +74,7 @@ class SectionToolWindow(ui.Window):
         SectionManager().refresh()
         self._start_dirty_listen()
 
-        # UI style
+        # UI 스타일(공통 기본 스타일 + 확장 전용 오버라이드) 적용
         ui_style = get_ui_style()
         style = copy.copy(DefaultWidgetStyle.get_style(ui_style))
         style.update(UI_STYLE)
@@ -79,7 +83,7 @@ class SectionToolWindow(ui.Window):
         self.frame.set_build_fn(self._build_ui)
         self.set_visibility_changed_fn(self._on_visibility_changed)
 
-        # Dock
+        # 기본적으로 Stage 창에 도킹해 같은 작업 맥락에서 사용하도록 한다.
         self.deferred_dock_in("Stage", ui.DockPolicy.CURRENT_WINDOW_IS_ACTIVE)
         self.set_docked_changed_fn(self._on_dock_changed)
 
@@ -125,7 +129,7 @@ class SectionToolWindow(ui.Window):
         return self.visible
 
     def _on_visibility_changed(self, visible: bool) -> None:
-        # OMFP-2189: hide section only when dialog closed and not always display
+        # OMFP-2189: "Always Display"가 꺼진 상태에서 창이 닫힐 때만 섹션을 숨긴다.
         if visible:
             self.frame.rebuild()
             self.enable_section(True)
@@ -147,16 +151,16 @@ class SectionToolWindow(ui.Window):
         return self._section_enabled
 
     def enable_section(self, enable: bool) -> None:
-        # Enable/Disable section slice
+        # RTX 섹션 슬라이스 활성/비활성
         self.set_active(enable)
 
-        # Enable/Disable section manipulator
+        # 매니퓰레이터 표시 상태도 섹션 활성과 동기화
         if enable != self._manipulator_visible:
             self._settings.set(SETTING_SECTION_MANIPULATOR, enable)
 
     def _on_section_enabled(self):
         self._section_enabled = self._settings.get_as_bool(SETTING_SECTION_ENABLED)
-        # add a section if no section exist
+        # 기즈모/UI를 표시하기 전에 최소 1개의 section variant를 보장한다.
         if SectionManager().section_count == 0:
             SectionManager().add_section()
             self._on_show_gizmo()
@@ -179,7 +183,7 @@ class SectionToolWindow(ui.Window):
                 self._options_panel = OptionsPanel()
                 self._quickmove_panel = QuickMovePanel()
 
-        # No idea why we need to do this to draw the correct size.
+        # 즉시 빌드하지 않으면 초기 프레임 크기가 깨지는 경우가 있어 수동 빌드를 호출한다.
         with self.frame:
             scrolling_frame = ui.ScrollingFrame(build_fn=generate)
         scrolling_frame.call_build_fn()
@@ -222,12 +226,14 @@ class SectionToolWindow(ui.Window):
         self._manipulator_visibility_setting_tp = None
 
     def _on_show_gizmo(self):
+        # section 매니퓰레이터를 바로 조작할 수 있도록 transform 모드로 강제한다.
         self._settings.set(TRANSFORM_OP_SETTING, "move")
         # OM-33610: when user select widget, make sure widget is displayed
         self.enable_section(True)
         asyncio.ensure_future(self.wait_section_widget())
 
     async def wait_section_widget(self):
+        # 뷰포트 씬 그래프가 완전히 준비될 때까지 몇 프레임 대기한다.
         for i in range(3):
             await omni.kit.app.get_app().next_update_async()
 

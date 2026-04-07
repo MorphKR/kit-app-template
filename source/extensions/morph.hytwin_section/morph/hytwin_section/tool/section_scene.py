@@ -31,7 +31,7 @@ ICON_OFFSET = 100
 
 
 class SectionScene:
-    """The window with the manupulator"""
+    """뷰포트 `SceneView`와 `SectionManipulator`를 소유/관리하는 컨테이너."""
 
     def __init__(self, ext_id: str, model: SectionModel, **kwargs):
         self._ext_id = ext_id
@@ -71,7 +71,7 @@ class SectionScene:
         self._viewport_window = None
 
     def __build_window(self):
-        """Called to build the widgets of the window"""
+        """활성 뷰포트 프레임에 SceneView와 매니퓰레이터를 구성한다."""
         self.frame = self._viewport_window.get_frame(self._ext_id)
         with self.frame:
             self._scene_view = sc.SceneView()

@@ -5,7 +5,7 @@ from omni.kit.widgets.custom import LightColors
 
 from ..common import get_data_path
 
-# UI layouts
+# UI 레이아웃 관련 상수
 CONTROL_HEIGHT = 24
 SWITCH_HEIGHT = 28
 SWITCH_WIDTH = 28

@@ -2,6 +2,7 @@ import omni.ui as ui
 
 
 class Switch:
+    # SimpleBoolModel과 아이콘 상태를 양방향 동기화하는 토글 위젯 래퍼.
     def __init__(self, model: ui.SimpleBoolModel, **kwargs):
         self._model = model
 
@@ -38,7 +39,7 @@ class Switch:
         if button != 0:  # pragma: no cover
             return
 
-        # The switch is changed.
+        # 좌클릭 시 체크 상태를 뒤집고 모델에도 즉시 반영한다.
         self.checked = not self.checked
         self._model.set_value(self.checked)
 

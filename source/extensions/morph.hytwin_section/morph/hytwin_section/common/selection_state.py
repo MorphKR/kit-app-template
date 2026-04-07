@@ -17,10 +17,12 @@ from omni.kit.viewport.window import ViewportWindow
 
 CONTEXT_MENU_SETTINGS = "/exts/omni.kit.window.viewport/showContextMenu"
 
-# NOTE: This should be something that the kit API handles for us. [OM-82367]
+# NOTE: 이상적으로는 Kit API에서 직접 제공되어야 하는 상태 관리다. [OM-82367]
 
 
 class SelectionState:
+    # 섹션 조작 중 뷰포트 선택/컨텍스트 메뉴 레이어를 임시로 비활성화했다가
+    # 원래 상태로 안전하게 복구하는 보조 클래스.
     def __init__(self, viewport_window: ViewportWindow):
         self.__settings = get_settings()
         self.__layers_state: Dict = {}
@@ -46,7 +48,7 @@ class SelectionState:
         if sel_layer and ctx_layer:
             return sel_layer.visible and ctx_layer.visible
 
-        # For the case [VIEW] that we don't have a context menu layer
+        # VIEW 모드 등 컨텍스트 메뉴 레이어가 없는 경우를 처리한다.
         if sel_layer is None:
             return False
         return sel_layer.visible
@@ -62,10 +64,10 @@ class SelectionState:
 
     def restore(self):
         """
-        Restores the viewport layer states to the original settings.
+        뷰포트 레이어와 컨텍스트 메뉴 설정을 초기 상태로 복구한다.
         """
         self.enabled = True
-        # Override the enabled setting of show context menu to its default
+        # showContextMenu 값을 저장해 둔 기본값으로 되돌린다.
         self.__settings.set(CONTEXT_MENU_SETTINGS, self.__ctx_menu_restore)
 
     def reserve(self):

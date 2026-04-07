@@ -26,12 +26,13 @@ PLANE_ATTR = "omni:rtx:scene:sectionPlane:plane"
 
 class SectionModel(sc.AbstractManipulatorModel):
     """
-    User part. The model tracks the section object.
+    USD의 섹션 위젯 transform을 추적하고,
+    계산된 plane 값을 활성 뷰포트 렌더 프라임에 반영하는 씬 매니퓰레이터 모델.
     """
 
     class TransformItem(sc.AbstractManipulatorItem):
         """
-        The Model Item represents the transform
+        매니퓰레이터가 편집하는 섹션 위젯의 transform 값을 담는 모델 아이템.
         """
 
         def __init__(self):
@@ -39,7 +40,7 @@ class SectionModel(sc.AbstractManipulatorModel):
             self.value = Gf.Matrix4d()
 
     def __init__(self):
-        # this should re-create when open stage
+        # 스테이지가 다시 열릴 때 모델 상태를 재구성할 수 있도록 초기화한다.
         super().__init__()
 
         self._usd_context = omni.usd.get_context()
@@ -72,10 +73,13 @@ class SectionModel(sc.AbstractManipulatorModel):
 
     def refresh(self):
         with self._get_section_edit_context():
-            self._set_section_plane([0, 0, 0, 0])  # Reset section plane to default
+            # 섹션 평면을 기본값으로 되돌린다.
+            self._set_section_plane([0, 0, 0, 0])
 
+        # 현재 stage 인스턴스 기준으로 USD 변경 리스너를 다시 등록한다.
         self._usd_listener = None
-        self._transform.value = Gf.Matrix4d()  # Reset to identity
+        # 위젯 transform도 항등행렬로 초기화한다.
+        self._transform.value = Gf.Matrix4d()
         stage = omni.usd.get_context().get_stage()
         self._usd_listener = Tf.Notice.Register(Usd.Notice.ObjectsChanged, self._on_usd_changed, stage)
 
@@ -103,10 +107,10 @@ class SectionModel(sc.AbstractManipulatorModel):
         with self._get_section_edit_context():
             if not value:  # pragma: no cover
                 return
-            # Set directly to the item
+            # 모델 값 반영 후 렌더 섹션 평면을 즉시 갱신한다.
             self._transform.value = value
             self.update_section_plane()
-            # This makes the manipulator updated
+            # 매니퓰레이터가 다시 그려지도록 변경 이벤트를 발생시킨다.
             self._item_changed(self._transform)
 
     def _on_usd_changed(self, notice, stage):
@@ -123,7 +127,7 @@ class SectionModel(sc.AbstractManipulatorModel):
 
     def _set_section_plane(self, value: list):
         try:
-            # prevent circular update on extension startup
+            # 확장 시작 시 상호 갱신 루프를 피하기 위해 scene 준비 여부를 먼저 확인한다.
             from .section_tool import SectionTool
 
             if not (viewport_scene := SectionTool().scene):
@@ -143,7 +147,7 @@ class SectionModel(sc.AbstractManipulatorModel):
 
     def update_section_plane(self):
         with self._get_section_edit_context():
-            # update the render section settings
+            # 현재 transform과 컷 방향 설정으로 렌더 섹션 평면을 계산한다.
             if self._settings.get_as_int(SETTING_SECTION_DIRECTION) == SECTION_DIRECTION_TOP:
                 direction = Gf.Vec3d(0, 0, -1)
             else:
@@ -151,11 +155,13 @@ class SectionModel(sc.AbstractManipulatorModel):
 
             point = self._transform.value.ExtractTranslation()
             normal = self._transform.value.TransformDir(direction)
+            # 렌더러 평면 방정식 형식: [nx, ny, nz, d]
+            # n·x + d = 0, d = -(n·p0)
             d = point * normal
             sectionPlane = [normal[0], normal[1], normal[2], -d]
 
             self._set_section_plane(sectionPlane)
 
-            # Original code to set section plane setting. This breaks with live session
-            # due to the way the RTX setting is handled.
+            # 과거에는 RTX settings 경로에 직접 기록했지만, 라이브 세션에서는
+            # 동기화 이슈가 있어 render product prim 속성에 직접 반영한다.
             # self._settings.set_float_array(SETTING_SECTION_PLANE, sectionPlane)

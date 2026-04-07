@@ -23,31 +23,32 @@ from .ui import SectionToolWindow
 g_singleton = None
 
 
-# Any class derived from `omni.ext.IExt` in top level module (defined in `python.modules` of `extension.toml`) will be
-# instantiated when extension gets enabled and `on_startup(ext_id)` will be called. Later when extension gets disabled
-# on_shutdown() is called.
+# 확장 진입점:
+# - SectionToolWindow: 패널 UI 수명주기 관리
+# - SectionTool: 뷰포트 기즈모/씬 수명주기 관리
+# `extension.toml`의 `python.modules`에 등록된 `omni.ext.IExt` 파생 클래스는
+# 확장 활성화 시 `on_startup(ext_id)`, 비활성화 시 `on_shutdown()`이 호출된다.
 class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
-    # ext_id is current extension id. It can be used with extension manager to query additional information, like where
-    # this extension is located on filesystem.
+    # 현재 extension id. 확장 관리자에서 경로/메타데이터를 조회할 때 사용한다.
     SETTING_MENU_PATH = "/exts/morph.hytwin_section/menuPath"
     VIEW_TOOLBAR_ID = "section"
 
     def on_startup(self, ext_id):
         self._ext_id = ext_id
-        # The ability to show up the window if the system requires it. We use it
-        # in QuickLayout.
+        # 시스템(예: QuickLayout)에서 창 표시를 요청할 수 있도록 등록해 두고,
+        # 실제 창 객체는 최초 표시 시점에 지연 생성한다.
         self._window = None
 
         ui.Workspace.set_show_window_fn(WINDOW_NAME, partial(self.show_window, None))
         self._toggle_id = ui.Workspace.set_window_visibility_changed_callback(self._visibility_changed_fn)
 
-        # Put the new menu
+        # 상단 메뉴에 Section 항목을 등록한다.
         settings = carb.settings.get_settings()
         self._menu_path = settings.get(SectionToolExtension.SETTING_MENU_PATH)
         menu_name = self._menu_path.split("/")[-1]
         menu_group = "/".join(self._menu_path.split("/")[:-1])
         self.menu_startup(WINDOW_NAME, menu_name, menu_group)
-        # for View toolbar
+        # 현재 뷰포트 툴 변경을 감시해 Section 창 표시 상태를 동기화한다.
         self._viewport_current_tool_changed_sub = settings.subscribe_to_node_change_events(
             CURRENT_TOOL_PATH, self._on_view_current_tool_changed
         )
@@ -75,20 +76,20 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
         settings = carb.settings.get_settings()
         settings.unsubscribe_to_change_events(self._viewport_current_tool_changed_sub)
         self.menu_shutdown()
-        # Deregister the function that shows the window from omni.ui
+        # omni.ui에 등록한 윈도우 표시 함수를 해제한다.
         ui.Workspace.set_show_window_fn(WINDOW_NAME, None)
         ui.Workspace.remove_window_visibility_changed_callback(self._toggle_id)
 
     def _visibility_changed_fn(self, name: str, visible: bool):
         if name == WINDOW_NAME:
-            # Called when the user pressed "X"
+            # 사용자가 창 우측 상단 X 버튼으로 닫았을 때 호출된다.
             self.menu_refresh()
 
-            # OMFP-3552: disable orbit and teleport
+            # OMFP-3552: Section 활성 중에는 툴 충돌을 줄이기 위해 내비게이션 툴 전환을 제어한다.
             settings = carb.settings.get_settings()
             TOOL_NAME = WINDOW_NAME
             if visible:
-                # avoid turning off other tools such as Measure
+                # Measure 같은 다른 툴을 강제로 끄지 않도록 navigation 상태에서만 전환한다.
                 if settings.get_as_string(CURRENT_TOOL_PATH) == "navigation":
                     settings.set_string(CURRENT_TOOL_PATH, TOOL_NAME)
             elif settings.get_as_string(CURRENT_TOOL_PATH) == TOOL_NAME:
@@ -109,11 +110,12 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
         if visible:
             self.show_window(None, visible)
         elif current_tool is None or str(current_tool).lower() == "none":
-            # "none" means we hide everything
+            # "none"은 모든 도구 비활성 상태이므로 창도 함께 숨긴다.
             self.show_window(None, False)
 
     def _on_stage_opened(self, stage_event):
-        # Should disable section when stage opened, make render faster
+        # 새 스테이지가 열리면 섹션 상태를 초기화해 이전 씬 상태가
+        # 다음 세션으로 섞여 들어가지 않도록 한다.
         settings = carb.settings.get_settings()
         if settings.get_as_bool(SETTING_SECTION_ENABLED):
             settings.set_bool(SETTING_SECTION_ENABLED, False)
@@ -122,9 +124,9 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
 
 
 def get_instance() -> SectionToolExtension:
-    """Return the singleton instance of SectionToolExtension for extension morph.hytwin_section.
+    """`morph.hytwin_section` 확장의 싱글턴 인스턴스를 반환한다.
 
     Returns:
-        SectionToolExtension: Instance of SectionToolExtension or None if not available.
+        SectionToolExtension: 사용 가능하면 인스턴스, 없으면 None.
     """
     return g_singleton

@@ -21,6 +21,7 @@ ROTATION_DEGREES_NUMBER = ["5", "10", "15", "30", "45", "90"]
 
 
 class QuickMovePanel(ExpandPanel):
+    # 섹션 평면 정렬/회전/컷 방향 반전을 빠르게 수행하는 패널.
     def __init__(self):
         super().__init__("Quick Move", 0, True)
 
@@ -108,7 +109,7 @@ class QuickMovePanel(ExpandPanel):
         self._rotation_degree = ROTATION_DEGREES_NUMBER[0]
         self._degree_combobox.model.add_item_changed_fn(self._on_degree_changed)
 
-        # Default to 45
+        # 기본 회전 각도는 45도로 시작한다.
         self._degree_combobox.model.current_index = 4
 
     def _align_x(self):
@@ -127,6 +128,7 @@ class QuickMovePanel(ExpandPanel):
         self._rotate(False)
 
     def _rotate(self, clockwise):
+        # UI 선택값(축/각도)을 SectionManager 연산 파라미터로 변환한다.
         if self._rotation_axis == "X":
             align = WidgetAlignment.X
         elif self._rotation_axis == "Y":

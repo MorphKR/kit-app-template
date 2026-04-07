@@ -38,6 +38,7 @@ from omni.kit.widget.settings import (
 
 
 class SectionSettingsWidgetBuilder(SettingsWidgetBuilder):
+    # 섹션 관련 설정 위젯의 기본값/리셋 동작을 공통으로 제공한다.
     DEFAULT_SETTINGS = {
         SETTING_SECTION_DIRECTION: SECTION_DIRECTION_TOP,
         SETTING_SECTION_MANIPULATOR: True,
@@ -63,6 +64,7 @@ class SectionSettingsWidgetBuilder(SettingsWidgetBuilder):
 
 
 class OptionsPanel(ExpandPanel):
+    # 설정 패널: 현재는 매니퓰레이터 표시 옵션을 제공한다.
     def __init__(self):
         section_default_direction = SectionSettingsWidgetBuilder._get_default(SETTING_SECTION_DIRECTION)
         section_default_manipulator = SectionSettingsWidgetBuilder._get_default(SETTING_SECTION_MANIPULATOR)
@@ -88,6 +90,7 @@ class OptionsPanel(ExpandPanel):
     def _add_setting(
         self, setting_type, name: str, path: str, range_from=0, range_to=0, speed=1, has_reset=True, tooltip=""
     ):
+        # Kit 버전별 속성명 차이를 흡수해 체크박스 라벨 정렬을 강제로 왼쪽으로 맞춘다.
         try:
             saved_checkbox_alignment = SettingsWidgetBuilder.checkbox_alignment
             saved_checkbox_alignment_set = SettingsWidgetBuilder.checkbox_alignment_set

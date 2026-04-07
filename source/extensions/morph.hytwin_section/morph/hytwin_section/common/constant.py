@@ -1,6 +1,6 @@
 from pathlib import Path
 
-# Settings
+# 확장/렌더러 설정 경로 상수
 PERSISTENT_SETTINGS_PREFIX = "/persistent"
 SETTING_SECTION_TOOL_ROOT = "/exts/morph.hytwin_section/"
 SETTING_SECTION_ALWAYS_DISPLAY = SETTING_SECTION_TOOL_ROOT + "alwaysDisplay"
