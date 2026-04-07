@@ -7,6 +7,7 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
 
+import carb
 import carb.settings
 import omni.ui as ui
 import omni.usd
@@ -103,6 +104,23 @@ class QuickMovePanel(ExpandPanel):
                     clicked_fn=self._inverse_cut_direction,
                 )
                 ui.Spacer(width=PANEL_PADDING_INNER_X)
+            ui.Spacer(height=8)
+            with ui.HStack(height=CONTROL_HEIGHT):
+                ui.Spacer(width=PANEL_PADDING_INNER_X - 10)
+                ui.Label("Prim Path", width=70, name="label")
+                self._prim_path_field = ui.StringField(width=256, height=CONTROL_HEIGHT)
+                self._prim_path_field.model.set_value("/World")
+                ui.Spacer(width=PANEL_PADDING_INNER_X)
+            ui.Spacer(height=8)
+            with ui.HStack(height=CONTROL_HEIGHT):
+                ui.Spacer(width=PANEL_PADDING_INNER_X - 10)
+                ui.Button(
+                    "Move Section To Prim Path",
+                    height=CONTROL_HEIGHT,
+                    name="control",
+                    clicked_fn=lambda: self._move_to_prim_path(self._prim_path_field.model.get_value_as_string()),
+                )
+                ui.Spacer(width=PANEL_PADDING_INNER_X)
 
         self._rotation_axis = AXISES[0]
         self._axis_combobox.model.add_item_changed_fn(self._on_axis_changed)
@@ -151,3 +169,15 @@ class QuickMovePanel(ExpandPanel):
     def _inverse_cut_direction(self) -> None:
         new_direction = 1 - self._settings.get(SETTING_SECTION_DIRECTION)
         self._settings.set(SETTING_SECTION_DIRECTION, new_direction)
+
+    def _move_to_prim_path(self, prim_path: str = "") -> None:
+        prim_path = (prim_path or "").strip()
+
+        if not prim_path:
+            carb.log_warn("[SectionTool] Prim path is empty.")
+            return
+
+        if SectionManager().set_widget_position_from_prim_path(prim_path):
+            carb.log_info(f"[SectionTool] Move Section To Prim Path succeeded: {prim_path}")
+        else:
+            carb.log_warn(f"[SectionTool] Prim not found or invalid: {prim_path}")

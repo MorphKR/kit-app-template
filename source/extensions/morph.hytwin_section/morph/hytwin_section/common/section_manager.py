@@ -155,6 +155,55 @@ class SectionManager:
                 transform.SetTranslateOnly(position)
                 self._section_transform_attr.Set(transform)
 
+    def set_widget_position_from_prim_path(self, prim_path: str) -> bool:
+        if not prim_path:
+            carb.log_warn("[SectionTool] set_widget_position_from_prim_path: empty prim path")
+            return False
+
+        if not self._stage:
+            self._stage = omni.usd.get_context().get_stage()
+        if not self._stage:
+            carb.log_warn("[SectionTool] set_widget_position_from_prim_path: stage is not ready")
+            return False
+
+        # Ensure section widget/transform attribute exists before moving.
+        if not self.get_section_widget_prim(create_if_not_exist=True):
+            carb.log_warn("[SectionTool] set_widget_position_from_prim_path: section widget prim is not ready")
+            return False
+        if not self._section_transform_attr:
+            carb.log_warn("[SectionTool] set_widget_position_from_prim_path: section transform attribute is missing")
+            return False
+
+        prim = self._stage.GetPrimAtPath(prim_path)
+        if not prim or not prim.IsValid():
+            carb.log_warn(f"[SectionTool] set_widget_position_from_prim_path: invalid prim path: {prim_path}")
+            return False
+
+        center = self._get_prim_world_center(prim)
+        if center is None:
+            carb.log_warn(f"[SectionTool] set_widget_position_from_prim_path: failed to compute center: {prim_path}")
+            return False
+        self.set_widget_position(center)
+        carb.log_info(f"[SectionTool] section moved to prim center: {prim_path} -> {center}")
+        return True
+
+    def _get_prim_world_center(self, prim):
+        # Prefer world-space bounding-box center for visible geometry.
+        try:
+            bound = self._bboxcache.ComputeWorldBound(prim).ComputeAlignedRange()
+            if bound and not bound.IsEmpty():
+                return bound.GetMidpoint()
+        except Exception:  # pragma: no cover
+            pass
+
+        # Fallback for non-boundable prims: world transform translation.
+        try:
+            xform = UsdGeom.Xformable(prim)
+            matrix = xform.ComputeLocalToWorldTransform(Usd.TimeCode.Default())
+            return matrix.ExtractTranslation()
+        except Exception:  # pragma: no cover
+            return None
+
     def _get_next_available_name(self):
         self._last_variant_id += 1
         if self._last_variant_id > 999:
