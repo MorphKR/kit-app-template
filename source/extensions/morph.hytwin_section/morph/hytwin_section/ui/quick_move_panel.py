@@ -27,6 +27,7 @@ class QuickMovePanel(ExpandPanel):
         super().__init__("Quick Move", 0, True)
 
         self._settings = carb.settings.get_settings()
+        self._target_buttons_frame = None
 
     def build_panel(self):
         with ui.VStack():
@@ -122,6 +123,21 @@ class QuickMovePanel(ExpandPanel):
                 )
                 ui.Spacer(width=PANEL_PADDING_INNER_X)
 
+            ui.Spacer(height=12)
+            with ui.HStack(height=CONTROL_HEIGHT):
+                ui.Spacer(width=PANEL_PADDING_INNER_X - 10)
+                ui.Label("Section Target List", name="label")
+                ui.Spacer()
+                ui.Button("Refresh", width=72, height=CONTROL_HEIGHT, name="control", clicked_fn=self._refresh_target_buttons)
+                ui.Spacer(width=PANEL_PADDING_INNER_X)
+
+            with ui.HStack(height=120):
+                ui.Spacer(width=PANEL_PADDING_INNER_X - 10)
+                self._target_buttons_frame = ui.ScrollingFrame(height=120)
+                with self._target_buttons_frame:
+                    self._build_target_buttons()
+                ui.Spacer(width=PANEL_PADDING_INNER_X)
+
         self._rotation_axis = AXISES[0]
         self._axis_combobox.model.add_item_changed_fn(self._on_axis_changed)
         self._rotation_degree = ROTATION_DEGREES_NUMBER[0]
@@ -181,3 +197,38 @@ class QuickMovePanel(ExpandPanel):
             carb.log_info(f"[SectionTool] Move Section To Prim Path succeeded: {prim_path}")
         else:
             carb.log_warn(f"[SectionTool] Prim not found or invalid: {prim_path}")
+
+    def _get_section_tool_object_paths(self):
+        stage = omni.usd.get_context().get_stage()
+        if not stage:
+            return []
+
+        result = []
+        for prim in stage.TraverseAll():
+            path = prim.GetPath().pathString
+            if path.endswith("/Section_Tool_Object"):
+                result.append(path)
+        return sorted(result)
+
+    def _select_section_target(self, section_path: str):
+        selection = omni.usd.get_context().get_selection()
+        selection.set_selected_prim_paths([section_path], True)
+
+    def _build_target_buttons(self):
+        with ui.VStack(spacing=6):
+            paths = self._get_section_tool_object_paths()
+            if not paths:
+                ui.Label("No Section_Tool_Object found.", name="label")
+                return
+
+            for path in paths:
+                ui.Button(
+                    path,
+                    height=CONTROL_HEIGHT,
+                    name="control",
+                    clicked_fn=lambda p=path: self._select_section_target(p),
+                )
+
+    def _refresh_target_buttons(self):
+        if self._target_buttons_frame:
+            self._target_buttons_frame.rebuild()
