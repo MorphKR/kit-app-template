@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2021, NVIDIA CORPORATION.  All rights reserved.
+﻿# Copyright (c) 2018-2021, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -50,8 +50,8 @@ class WidgetAlignment:
 
 @Singleton
 class SectionManager:
-    # 섹션 variant와 위젯 prim 속성을 관리하는 중앙 상태 관리자.
-    # UI 패널과 매니퓰레이터의 편집 요청은 모두 이 클래스를 통해 처리된다.
+    # ?뱀뀡 variant? ?꾩젽 prim ?띿꽦??愿由ы븯??以묒븰 ?곹깭 愿由ъ옄.
+    # UI ?⑤꼸怨?留ㅻ땲?곕젅?댄꽣???몄쭛 ?붿껌? 紐⑤몢 ???대옒?ㅻ? ?듯빐 泥섎━?쒕떎.
     def __init__(self):
         self._section_variants = None
         self._last_variant_id = 0
@@ -102,15 +102,15 @@ class SectionManager:
 
     def add_section(self):
         with self._get_section_edit_context():
-            # 현재 위젯 상태를 읽어 신규 섹션 데이터를 만든다.
+            # ?꾩옱 ?꾩젽 ?곹깭瑜??쎌뼱 ?좉퇋 ?뱀뀡 ?곗씠?곕? 留뚮뱺??
             section = self._get_section_from_widget(is_new=True)
             if section is None:  # pragma: no cover
                 carb.log_error("[SectionTool] Failed to get section info!")
                 return None
 
-            # 신규 섹션은 이전 섹션 복사본이 아니라 독립 섹션으로 생성한다.
+            # ?좉퇋 ?뱀뀡? ?댁쟾 ?뱀뀡 蹂듭궗蹂몄씠 ?꾨땲???낅┰ ?뱀뀡?쇰줈 ?앹꽦?쒕떎.
             self._add_section_internal(section)
-            # 패널 UI에 신규 섹션 추가를 알린다.
+            # ?⑤꼸 UI???좉퇋 ?뱀뀡 異붽?瑜??뚮┛??
             if self._on_added_section_fn:
                 self._on_added_section_fn(section["name"])
 
@@ -225,12 +225,12 @@ class SectionManager:
             name = section["name"]
             self._section_variants[name] = section
 
-            # 뷰포트 위젯 prim의 variant set에 섹션을 추가한다.
+            # 酉고룷???꾩젽 prim??variant set???뱀뀡??異붽??쒕떎.
             carb.log_info(f"[SectionTool] Section variant {name} added, need to save manually")
 
-            variant_set.AddVariant(name)  # variant set에 항목 추가
-            variant_set.SetVariantSelection(name)  # 방금 만든 섹션 variant 선택
-            with variant_set.GetVariantEditContext():  # 새 variant 편집 컨텍스트 진입
+            variant_set.AddVariant(name)  # variant set????ぉ 異붽?
+            variant_set.SetVariantSelection(name)  # 諛⑷툑 留뚮뱺 ?뱀뀡 variant ?좏깮
+            with variant_set.GetVariantEditContext():  # ??variant ?몄쭛 而⑦뀓?ㅽ듃 吏꾩엯
                 self.set_direction(section["direction"])
                 self._set_light(section["light"])
                 self._section_transform_attr.Set(section["transform"])
@@ -280,7 +280,7 @@ class SectionManager:
         return self._get_section_attribute(ATTR_SECTION_DIRECTION, DEFAULT_SECTION_TOP)
 
     def _create_section_spawn_point(self) -> Gf.Vec3d:
-        # 카메라 위치/타깃 기준 전방 벡터 방향으로 일정 거리 떨어진 지점을 생성 위치로 사용한다.
+        # 移대찓???꾩튂/?源?湲곗? ?꾨갑 踰≫꽣 諛⑺뼢?쇰줈 ?쇱젙 嫄곕━ ?⑥뼱吏?吏?먯쓣 ?앹꽦 ?꾩튂濡??ъ슜?쒕떎.
         camera_path = get_active_viewport_camera_path()
         camera_state = ViewportCameraState(camera_path)
 
@@ -303,8 +303,13 @@ class SectionManager:
         with self._get_section_edit_context():
             self._clear_section_attribute(ATTR_SECTION_DIRECTION)
 
-    def get_transform_attr(self):
+    def get_transform_attr(self, viewport_key: str = None):
         with self._get_section_edit_context():
+            if viewport_key:
+                widget_prim = self.get_section_widget_prim(create_if_not_exist=True, viewport_key=viewport_key)
+                if not widget_prim:
+                    return None
+                return widget_prim.GetAttribute(ATTR_SECTION_TRANSFORM)
             if self._section_transform_attr:
                 return self._section_transform_attr
             return None
@@ -320,7 +325,7 @@ class SectionManager:
             if vset is None:
                 return
 
-            # Section_NNN 네이밍 규칙을 이용해 다음 사용 가능한 번호를 계산한다.
+            # Section_NNN ?ㅼ씠諛?洹쒖튃???댁슜???ㅼ쓬 ?ъ슜 媛?ν븳 踰덊샇瑜?怨꾩궛?쒕떎.
             for name in vset.GetVariantNames():
                 carb.log_info(f"[SectionTool] Found variant {name}")
                 self._section_variants[name] = None
@@ -341,13 +346,13 @@ class SectionManager:
             if vset is None:  # pragma: no cover
                 return None
 
-            # 현재 위젯 상태를 읽어 variant 데이터로 저장한다.
+            # ?꾩옱 ?꾩젽 ?곹깭瑜??쎌뼱 variant ?곗씠?곕줈 ??ν븳??
             section = self._get_section_from_widget(name)
 
             carb.log_info(f"[SectionTool] Save section to variant {name}")
             self._section_variants[name] = copy.deepcopy(section)
 
-            # 현재 섹션 상태를 선택된 variant에 기록한다.
+            # ?꾩옱 ?뱀뀡 ?곹깭瑜??좏깮??variant??湲곕줉?쒕떎.
             vset.SetVariantSelection(name)
             with vset.GetVariantEditContext():
                 self.set_direction(section["direction"])
@@ -398,53 +403,57 @@ class SectionManager:
                         else:  # pragma: no cover
                             return None
 
-            return self._section_variant_set
+            return self._section_variant_set    def _sanitize_viewport_key(self, viewport_key: str) -> str:
+        safe = re.sub(r"[^a-zA-Z0-9_]", "_", str(viewport_key or "default"))
+        return safe.strip("_") or "default"
 
-    def get_section_widget_prim(self, create_if_not_exist=False):
+    def _get_section_widget_path(self, section_tool_path: str, viewport_key: str = None) -> str:
+        if not viewport_key:
+            return section_tool_path + SECTION_PRIM_PATH
+        safe_key = self._sanitize_viewport_key(viewport_key)
+        return f"{section_tool_path}/{safe_key}{SECTION_PRIM_PATH}"
+
+    def get_section_widget_prim(self, create_if_not_exist=False, viewport_key: str = None):
         with self._get_section_edit_context():
-            if self._widget_prim:
+            if self._widget_prim and not viewport_key:
                 return self._widget_prim
 
             if not self._stage:
                 self._stage = omni.usd.get_context().get_stage()
 
             section_tool_path = self._get_section_tool_path()
-            section_prim_path = section_tool_path + SECTION_PRIM_PATH
+            section_prim_path = self._get_section_widget_path(section_tool_path, viewport_key)
 
-            self._widget_prim = self._stage.GetPrimAtPath(section_prim_path)
+            widget_prim = self._stage.GetPrimAtPath(section_prim_path)
 
-            if self._widget_prim:
-                if not self._widget_prim.IsA(UsdGeom.Xformable):
-                    # OM-58133: 구버전 호환을 위해 Xform 타입으로 재정의
-                    self._widget_prim = self._stage.DefinePrim(section_prim_path, "Xform")
-                    # self._widget_prim.SetMetadata("no_delete", True)
+            if widget_prim:
+                if not widget_prim.IsA(UsdGeom.Xformable):
+                    widget_prim = self._stage.DefinePrim(section_prim_path, "Xform")
             elif create_if_not_exist:
-                self._widget_prim = self._stage.DefinePrim(section_prim_path, "Xform")
-                # self._widget_prim.SetMetadata("no_delete", True)
+                widget_prim = self._stage.DefinePrim(section_prim_path, "Xform")
 
-            if not self._widget_prim:
+            if not widget_prim:
                 return None
 
-            xformable = UsdGeom.Xformable(self._widget_prim)
-
-            self._section_transform_attr = self._widget_prim.GetAttribute(ATTR_SECTION_TRANSFORM)
-            if not self._section_transform_attr:
-                # 섹션 prim의 transform op를 초기화한다.
+            xformable = UsdGeom.Xformable(widget_prim)
+            section_transform_attr = widget_prim.GetAttribute(ATTR_SECTION_TRANSFORM)
+            if not section_transform_attr:
                 xformable.AddXformOp(UsdGeom.XformOp.TypeTransform)
-                self._section_transform_attr = self._widget_prim.GetAttribute(ATTR_SECTION_TRANSFORM)
+                section_transform_attr = widget_prim.GetAttribute(ATTR_SECTION_TRANSFORM)
 
-                # 화면 중앙 기준 카메라 전방 오프셋 위치에 섹션을 생성한다.
                 spawn_pos = self._create_section_spawn_point()
                 transform = Gf.Matrix4d()
                 transform.SetTranslateOnly(spawn_pos)
-                self._section_transform_attr.Set(transform)
+                section_transform_attr.Set(transform)
 
             self._tool_prim = self._stage.GetPrimAtPath(section_tool_path)
-            self._tool_prim.SetMetadata(
-                HIDE_IN_STAGE_WINDOW, True
-            )  # OM-90917 Sections appear in layer but not stage  # OMFP-2500 section tool prims requested to be hidden in stage
+            self._tool_prim.SetMetadata(HIDE_IN_STAGE_WINDOW, True)
 
-            return self._widget_prim
+            if not viewport_key:
+                self._widget_prim = widget_prim
+                self._section_transform_attr = section_transform_attr
+
+            return widget_prim
 
     def _get_section_tool_path(self):
         with self._get_section_edit_context():
@@ -456,8 +465,8 @@ class SectionManager:
             return SECTION_TOOL_PATH
 
     def _get_section_edit_context(self):
-        # useSessionLayer 설정에 따라 모든 섹션 편집을 session/root 레이어에 기록해
-        # 원본 stage authored 데이터 오염을 방지한다.
+        # useSessionLayer ?ㅼ젙???곕씪 紐⑤뱺 ?뱀뀡 ?몄쭛??session/root ?덉씠?댁뿉 湲곕줉??
+        # ?먮낯 stage authored ?곗씠???ㅼ뿼??諛⑹??쒕떎.
         stage = omni.usd.get_context().get_stage()
         sect_layer = self._get_section_layer()
         return Usd.EditContext(stage, sect_layer)
@@ -477,8 +486,8 @@ class SectionManager:
             if isinstance(prim_paths, list) and len(prim_paths) > 0:
                 for path in prim_paths:
                     prim = self._stage.GetPrimAtPath(path)
-                    # 일부 자산에서는 location 기반 계산이 부정확할 수 있어
-                    # 월드 바운딩 박스로 중심점을 계산한다.
+                    # ?쇰? ?먯궛?먯꽌??location 湲곕컲 怨꾩궛??遺?뺥솗?????덉뼱
+                    # ?붾뱶 諛붿슫??諛뺤뒪濡?以묒떖?먯쓣 怨꾩궛?쒕떎.
                     # xform = UsdGeom.Xformable(prim)
                     # matrix = xform.GetLocalTransformation()
                     # location = matrix.ExtractTranslation()
@@ -490,3 +499,4 @@ class SectionManager:
                                 bound.UnionWith(sub_bound)
                     all_bound.UnionWith(bound)
             return all_bound.GetMidpoint()
+

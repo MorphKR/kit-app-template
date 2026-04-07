@@ -78,6 +78,7 @@ class SectionManipulator(sc.Manipulator):
         self._handle_offset = SECTION_HEIGHT + SECTION_WIDTH * 0.5
 
         self.__selection_state: SelectionState = SelectionState(kwargs.get("viewport_window", None))
+        self._viewport_key = kwargs.get("viewport_key", None)
         self._selection = omni.usd.get_context().get_selection()
         self._section = None
 
@@ -196,7 +197,7 @@ class SectionManipulator(sc.Manipulator):
         self.show_gizmo(True)
 
     def show_gizmo(self, value):
-        widget_prim = SectionManager().get_section_widget_prim()
+        widget_prim = SectionManager().get_section_widget_prim(viewport_key=self._viewport_key)
         if value and widget_prim:
             widget_prim_path = widget_prim.GetPath().pathString
             self._selection.set_selected_prim_paths([widget_prim_path], True)

@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, NVIDIA CORPORATION.  All rights reserved.
+﻿# Copyright (c) 2018-2020, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -31,20 +31,21 @@ ICON_OFFSET = 100
 
 
 class SectionScene:
-    """뷰포트 `SceneView`와 `SectionManipulator`를 소유/관리하는 컨테이너."""
 
-    def __init__(self, ext_id: str, model: SectionModel, **kwargs):
+    def __init__(self, ext_id: str, viewport_window=None, viewport_key: str = None, **kwargs):
         self._ext_id = ext_id
         self._settings = carb.settings.get_settings()
-        self._section_model = model
+        self._section_model = None
         self._manipulator = None
-        self._viewport_window = get_active_viewport_window()
+        self._viewport_window = viewport_window or get_active_viewport_window()
+        self._viewport_key = viewport_key
         self.detachable = False
         self._scene_view = None
 
         self._cut_direction_setting_tp = omni.kit.app.SettingChangeSubscription(
             SETTING_SECTION_DIRECTION, lambda *_: self._on_section_direction_changed()
         )
+        self._section_model = SectionModel(viewport_key=self._viewport_key, viewport_window=self._viewport_window)
 
         self.__build_window()
 
@@ -52,12 +53,18 @@ class SectionScene:
     def viewport_api(self):
         return self._viewport_window.viewport_api if self._viewport_window else None
 
+    @property
+    def viewport_window(self):
+        return self._viewport_window
+
     def destroy(self):
         if self._manipulator:
             self._manipulator.destroy()
             self._manipulator = None
+        if self._section_model:
+            self._section_model.destroy()
+            self._section_model = None
 
-        self._section_model = None
         self._settings = None
         self._cut_direction_setting_tp = None
 
@@ -71,16 +78,22 @@ class SectionScene:
         self._viewport_window = None
 
     def __build_window(self):
-        """활성 뷰포트 프레임에 SceneView와 매니퓰레이터를 구성한다."""
+        """Viewport frame에 SceneView와 SectionManipulator를 구성한다."""
+        if not self._viewport_window:
+            return
         self.frame = self._viewport_window.get_frame(self._ext_id)
         with self.frame:
             self._scene_view = sc.SceneView()
             with self._scene_view.scene:
-                self._manipulator = SectionManipulator(model=self._section_model, viewport_window=self._viewport_window)
+                self._manipulator = SectionManipulator(
+                    model=self._section_model, viewport_window=self._viewport_window, viewport_key=self._viewport_key
+                )
 
             self._viewport_window.viewport_api.add_scene_view(self._scene_view)
 
     def show(self, visible: bool):
+        if not hasattr(self, "frame") or not self.frame:
+            return
         self.frame.visible = visible
         if self._manipulator:
             self._manipulator.show(visible)
@@ -88,6 +101,10 @@ class SectionScene:
     def show_section_gizmo(self, value):
         if self._manipulator:
             self._manipulator.show_gizmo(value)
+
+    def refresh(self):
+        if self._section_model:
+            self._section_model.refresh()
 
     def _on_section_direction_changed(self):
         if self._section_model:
