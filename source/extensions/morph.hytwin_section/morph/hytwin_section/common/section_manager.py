@@ -118,9 +118,10 @@ class SectionManager:
 
     def align_widget(self, align):
         with self._get_section_edit_context():
-            if not self._section_transform_attr:  # pragma: no cover
+            transform_attr = self._resolve_target_transform_attr()
+            if not transform_attr:  # pragma: no cover
                 return
-            transform = self._section_transform_attr.Get()
+            transform = transform_attr.Get()
             if align == WidgetAlignment.X:
                 rotation = Gf.Rotation(Gf.Vec3d(0, 1, 0), 90) * Gf.Rotation(Gf.Vec3d(1, 0, 0), 90)
             elif align == WidgetAlignment.Y:
@@ -128,12 +129,13 @@ class SectionManager:
             else:
                 rotation = Gf.Rotation().SetIdentity()
             transform.SetRotateOnly(rotation)
-            self._section_transform_attr.Set(transform)
+            transform_attr.Set(transform)
 
     def rotate_widget(self, align, angle):
         with self._get_section_edit_context():
-            if self._section_transform_attr:
-                transform = self._section_transform_attr.Get()
+            transform_attr = self._resolve_target_transform_attr()
+            if transform_attr:
+                transform = transform_attr.Get()
                 rotation = transform.ExtractRotation()
                 if align == WidgetAlignment.X:
                     rotate_axis = rotation.TransformDir(Gf.Vec3d(1, 0, 0))
@@ -146,14 +148,50 @@ class SectionManager:
                     rotate_to = Gf.Rotation(rotate_axis, angle)
                 rotation *= rotate_to
                 transform.SetRotateOnly(rotation)
-                self._section_transform_attr.Set(transform)
+                transform_attr.Set(transform)
 
     def set_widget_position(self, position):
         with self._get_section_edit_context():
-            if self._section_transform_attr:
-                transform = self._section_transform_attr.Get()
+            transform_attr = self._resolve_target_transform_attr()
+            if transform_attr:
+                transform = transform_attr.Get()
                 transform.SetTranslateOnly(position)
-                self._section_transform_attr.Set(transform)
+                transform_attr.Set(transform)
+
+    def _is_section_widget_path(self, prim_path: str) -> bool:
+        return bool(prim_path and str(prim_path).endswith(SECTION_PRIM_PATH))
+
+    def _get_selected_section_transform_attr(self):
+        usd_context = omni.usd.get_context()
+        selection = usd_context.get_selection() if usd_context else None
+        if not selection:
+            return None
+
+        selected_paths = selection.get_selected_prim_paths() or []
+        for prim_path in reversed(selected_paths):
+            if not self._is_section_widget_path(prim_path):
+                continue
+            prim = self._stage.GetPrimAtPath(prim_path) if self._stage else None
+            if prim and prim.IsValid():
+                attr = prim.GetAttribute(ATTR_SECTION_TRANSFORM)
+                if attr:
+                    return attr
+        return None
+
+    def _resolve_target_transform_attr(self):
+        # Priority:
+        # 1) currently selected Section_Tool_Object
+        # 2) cached default transform attr (legacy fallback)
+        selected_attr = self._get_selected_section_transform_attr()
+        if selected_attr:
+            return selected_attr
+
+        if self._section_transform_attr:
+            return self._section_transform_attr
+
+        if self.get_section_widget_prim(create_if_not_exist=True):
+            return self._section_transform_attr
+        return None
 
     def set_widget_position_from_prim_path(self, prim_path: str) -> bool:
         if not prim_path:
@@ -166,11 +204,8 @@ class SectionManager:
             carb.log_warn("[SectionTool] set_widget_position_from_prim_path: stage is not ready")
             return False
 
-        # Ensure section widget/transform attribute exists before moving.
-        if not self.get_section_widget_prim(create_if_not_exist=True):
-            carb.log_warn("[SectionTool] set_widget_position_from_prim_path: section widget prim is not ready")
-            return False
-        if not self._section_transform_attr:
+        # Ensure target section transform exists (selected section first, fallback default).
+        if not self._resolve_target_transform_attr():
             carb.log_warn("[SectionTool] set_widget_position_from_prim_path: section transform attribute is missing")
             return False
 
