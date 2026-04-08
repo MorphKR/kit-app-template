@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2021, NVIDIA CORPORATION.  All rights reserved.
+﻿# Copyright (c) 2018-2021, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -182,41 +182,22 @@ class SectionManager:
 
             self.save_section(section["name"])
 
-    def align_widget(self, align):
+    def align_widget(self, align, apply_to_all_scenes: bool = True, scene_index: int = None):
         """선택한 축 기준으로 섹션을 정렬한다."""
-        with self._get_section_edit_context():
-            transform_attr = self._resolve_target_transform_attr()
-            if not transform_attr:  # pragma: no cover
-                return
-            transform = transform_attr.Get()
-            if align == WidgetAlignment.X:
-                rotation = Gf.Rotation(Gf.Vec3d(0, 1, 0), 90) * Gf.Rotation(Gf.Vec3d(1, 0, 0), 90)
-            elif align == WidgetAlignment.Y:
-                rotation = Gf.Rotation(Gf.Vec3d(1, 0, 0), -90) * Gf.Rotation(Gf.Vec3d(0, 1, 0), -90)
-            else:
-                rotation = Gf.Rotation().SetIdentity()
-            transform.SetRotateOnly(rotation)
-            transform_attr.Set(transform)
+        if align == WidgetAlignment.X:
+            rotation = Gf.Rotation(Gf.Vec3d(0, 1, 0), 90) * Gf.Rotation(Gf.Vec3d(1, 0, 0), 90)
+        elif align == WidgetAlignment.Y:
+            rotation = Gf.Rotation(Gf.Vec3d(1, 0, 0), -90) * Gf.Rotation(Gf.Vec3d(0, 1, 0), -90)
+        else:
+            rotation = Gf.Rotation().SetIdentity()
 
-    def rotate_widget(self, align, angle):
+        self._apply_rotation_to_widget_transforms(
+            rotation, apply_to_all_scenes=apply_to_all_scenes, scene_index=scene_index
+        )
+
+    def rotate_widget(self, align, angle, apply_to_all_scenes: bool = True, scene_index: int = None):
         """현재 축과 각도 설정으로 섹션을 회전한다."""
-        with self._get_section_edit_context():
-            transform_attr = self._resolve_target_transform_attr()
-            if transform_attr:
-                transform = transform_attr.Get()
-                rotation = transform.ExtractRotation()
-                if align == WidgetAlignment.X:
-                    rotate_axis = rotation.TransformDir(Gf.Vec3d(1, 0, 0))
-                    rotate_to = Gf.Rotation(rotate_axis, angle)
-                elif align == WidgetAlignment.Y:
-                    rotate_axis = rotation.TransformDir(Gf.Vec3d(0, 1, 0))
-                    rotate_to = Gf.Rotation(rotate_axis, angle)
-                else:
-                    rotate_axis = rotation.TransformDir(Gf.Vec3d(0, 0, 1))
-                    rotate_to = Gf.Rotation(rotate_axis, angle)
-                rotation *= rotate_to
-                transform.SetRotateOnly(rotation)
-                transform_attr.Set(transform)
+        self._apply_incremental_rotation_to_widget_transforms(align=align, angle=angle, apply_to_all_scenes=apply_to_all_scenes, scene_index=scene_index)
 
     def set_widget_position(self, position):
         """입력값을 내부 상태와 설정에 반영한다."""
@@ -626,3 +607,219 @@ class SectionManager:
                                 bound.UnionWith(sub_bound)
                     all_bound.UnionWith(bound)
             return all_bound.GetMidpoint()
+
+    def move_scene_models_to_placeholder_prim_center(self) -> bool:
+        """
+        SectionTool의 모든 scene model 위치를 임의 prim 중심으로 이동한다.
+        """
+        if not self._stage:
+            self._stage = omni.usd.get_context().get_stage()
+        if not self._stage:
+            carb.log_warn("[SectionTool] move_scene_models_to_placeholder_prim_center: stage is not ready")
+            return False
+
+        from ..tool import SectionTool
+
+        moved_any = False
+        for scene in SectionTool().scenes:
+            viewport_key = getattr(scene, "_viewport_key", None)
+
+            # TODO(사용자 지정): scene/viewport 기준으로 대상 prim 경로를 선택하세요.
+            # 예시:
+            # if viewport_key == "id:123":
+            #     target_prim_path = "/World/Cube_A"
+            # else:
+            #     target_prim_path = "/World/Cube_B"
+            target_prim_path = "/World/PlaceholderPrim"
+
+            # TODO(사용자 지정): 필요 시 기대 좌표 예시
+            # 예시 중심 좌표: (0.0, 100.0, 0.0)
+            prim = self._stage.GetPrimAtPath(target_prim_path)
+            if not prim or not prim.IsValid():
+                carb.log_warn(
+                    "[SectionTool] move_scene_models_to_placeholder_prim_center: "
+                    f"invalid prim path for viewport({viewport_key}): {target_prim_path}"
+                )
+                continue
+
+            center = self._get_prim_world_center(prim)
+            if center is None:
+                carb.log_warn(
+                    "[SectionTool] move_scene_models_to_placeholder_prim_center: "
+                    f"failed to compute center for viewport({viewport_key}): {target_prim_path}"
+                )
+                continue
+
+            model = getattr(scene, "_section_model", None)
+            if not model:
+                continue
+            try:
+                transform = Gf.Matrix4d()
+                transform.SetTranslateOnly(center)
+                model.set_floats(model.get_item("transform"), transform)
+                moved_any = True
+            except Exception as exc:  # pragma: no cover
+                carb.log_warn(
+                    f"[SectionTool] move_scene_models_to_placeholder_prim_center: failed to update scene model: {exc}"
+                )
+
+        if not moved_any:
+            carb.log_warn("[SectionTool] move_scene_models_to_placeholder_prim_center: no scene model was updated")
+            return False
+
+        carb.log_info("[SectionTool] move_scene_models_to_placeholder_prim_center: scene model update completed")
+        return True
+
+    def move_scenes_in_connected_prim_range(self, dir: str, value: float) -> bool:
+        """
+        scenes를 순회하며 각 scene에 연결된 prim의 중심 기준 축 범위(0~1) 위치로 이동한다.
+        dir: "x" | "y" | "z"
+        value: 0.0 ~ 1.0
+        """
+        axis_map = {"x": 0, "y": 1, "z": 2}
+        axis = axis_map.get(str(dir or "").lower())
+        if axis is None:
+            carb.log_warn(f"[SectionTool] move_scenes_in_connected_prim_range: invalid dir: {dir}")
+            return False
+
+        if not self._stage:
+            self._stage = omni.usd.get_context().get_stage()
+        if not self._stage:
+            carb.log_warn("[SectionTool] move_scenes_in_connected_prim_range: stage is not ready")
+            return False
+
+        t = max(0.0, min(1.0, float(value)))
+
+        from ..tool import SectionTool
+
+        scenes = SectionTool().scenes
+        if not scenes:
+            carb.log_warn("[SectionTool] move_scenes_in_connected_prim_range: no scenes")
+            return False
+
+        moved_any = False
+        last_center = None
+
+        for scene in scenes:
+            # TODO(사용자 지정): scene -> 연결 prim 조회 로직을 여기에 추가하세요.
+            # 예시:
+            # prim = self._stage.GetPrimAtPath("/World/YourPrim")
+            prim = None
+            if not prim or not prim.IsValid():
+                continue
+
+            center = self._get_prim_world_center(prim)
+            if center is None:
+                continue
+
+            try:
+                bound = self._bboxcache.ComputeWorldBound(prim).ComputeAlignedRange()
+            except Exception:  # pragma: no cover
+                continue
+
+            if not bound or bound.IsEmpty():
+                continue
+
+            axis_min = bound.GetMin()[axis]
+            axis_max = bound.GetMax()[axis]
+            target_axis = axis_min + (axis_max - axis_min) * t
+
+            target = Gf.Vec3d(center[0], center[1], center[2])
+            target[axis] = target_axis
+
+            model = getattr(scene, "_section_model", None)
+            if not model:
+                continue
+
+            try:
+                transform = Gf.Matrix4d()
+                transform.SetTranslateOnly(target)
+                model.set_floats(model.get_item("transform"), transform)
+                moved_any = True
+                last_center = target
+            except Exception as exc:  # pragma: no cover
+                carb.log_warn(f"[SectionTool] move_scenes_in_connected_prim_range: failed to update scene model: {exc}")
+
+        if not moved_any:
+            carb.log_warn("[SectionTool] move_scenes_in_connected_prim_range: no scene model was updated")
+            return False
+
+        if last_center is not None:
+            self.set_widget_position(last_center)
+
+        carb.log_info("[SectionTool] move_scenes_in_connected_prim_range: scene model update completed")
+        return True
+
+    def _iter_scene_transform_attrs(self):
+        """현재 열려 있는 모든 scene의 transform attribute를 순회한다."""
+        from ..tool import SectionTool
+
+        attrs = []
+        seen = set()
+        for scene in SectionTool().scenes:
+            viewport_key = getattr(scene, "_viewport_key", None)
+            attr = self.get_transform_attr(viewport_key=viewport_key)
+            if not attr:
+                continue
+            key = str(attr.GetPath())
+            if key in seen:
+                continue
+            seen.add(key)
+            attrs.append(attr)
+        return attrs
+
+    def _iter_target_transform_attrs(self, apply_to_all_scenes: bool, scene_index: int = None):
+        """요청 범위(전체 scene/단일 대상)에 맞는 transform attribute 목록을 반환한다."""
+        if apply_to_all_scenes:
+            attrs = self._iter_scene_transform_attrs()
+            if attrs:
+                return attrs
+        elif scene_index is not None:
+            attr = self._get_scene_transform_attr_by_index(scene_index)
+            if attr:
+                return [attr]
+            carb.log_warn(f"[SectionTool] invalid scene index: {scene_index}")
+
+        transform_attr = self._resolve_target_transform_attr()
+        return [transform_attr] if transform_attr else []
+
+    def _apply_rotation_to_widget_transforms(self, rotation: Gf.Rotation, apply_to_all_scenes: bool = True, scene_index: int = None):
+        """대상 widget transform들에 절대 회전을 적용한다."""
+        with self._get_section_edit_context():
+            for transform_attr in self._iter_target_transform_attrs(apply_to_all_scenes, scene_index=scene_index):
+                transform = transform_attr.Get()
+                transform.SetRotateOnly(rotation)
+                transform_attr.Set(transform)
+
+    def _apply_incremental_rotation_to_widget_transforms(self, align, angle, apply_to_all_scenes: bool = True, scene_index: int = None):
+        """대상 widget transform들에 축 기준 증분 회전을 적용한다."""
+        with self._get_section_edit_context():
+            for transform_attr in self._iter_target_transform_attrs(apply_to_all_scenes, scene_index=scene_index):
+                transform = transform_attr.Get()
+                rotation = transform.ExtractRotation()
+                if align == WidgetAlignment.X:
+                    rotate_axis = rotation.TransformDir(Gf.Vec3d(1, 0, 0))
+                    rotate_to = Gf.Rotation(rotate_axis, angle)
+                elif align == WidgetAlignment.Y:
+                    rotate_axis = rotation.TransformDir(Gf.Vec3d(0, 1, 0))
+                    rotate_to = Gf.Rotation(rotate_axis, angle)
+                else:
+                    rotate_axis = rotation.TransformDir(Gf.Vec3d(0, 0, 1))
+                    rotate_to = Gf.Rotation(rotate_axis, angle)
+                rotation *= rotate_to
+                transform.SetRotateOnly(rotation)
+                transform_attr.Set(transform)
+
+    def _get_scene_transform_attr_by_index(self, scene_index: int):
+        """scene index 기준으로 단일 scene의 transform attribute를 반환한다."""
+        if scene_index is None or scene_index < 0:
+            return None
+
+        from ..tool import SectionTool
+
+        scenes = SectionTool().scenes
+        if scene_index >= len(scenes):
+            return None
+
+        viewport_key = getattr(scenes[scene_index], "_viewport_key", None)
+        return self.get_transform_attr(viewport_key=viewport_key)
