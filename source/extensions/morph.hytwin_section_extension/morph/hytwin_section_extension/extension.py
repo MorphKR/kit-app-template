@@ -1,4 +1,4 @@
-# Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
+﻿# Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -23,39 +23,39 @@ from .ui import SectionToolWindow
 g_singleton = None
 
 
-# 확장 진입점:
-# - SectionToolWindow: 패널 UI 수명주기 관리
-# - SectionTool: 뷰포트 기즈모/씬 수명주기 관리
-# `extension.toml`의 `python.modules`에 등록된 `omni.ext.IExt` 파생 클래스는
-# 확장 활성화 시 `on_startup(ext_id)`, 비활성화 시 `on_shutdown()`이 호출된다.
+# ?뺤옣 吏꾩엯??
+# - SectionToolWindow: ?⑤꼸 UI ?섎챸二쇨린 愿由?
+# - SectionTool: 酉고룷??湲곗쫰紐????섎챸二쇨린 愿由?
+# `extension.toml`??`python.modules`???깅줉??`omni.ext.IExt` ?뚯깮 ?대옒?ㅻ뒗
+# ?뺤옣 ?쒖꽦????`on_startup(ext_id)`, 鍮꾪솢?깊솕 ??`on_shutdown()`???몄텧?쒕떎.
 class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
-    # 현재 extension id. 확장 관리자에서 경로/메타데이터를 조회할 때 사용한다.
-    SETTING_MENU_PATH = "/exts/morph.hytwin_section/menuPath"
+    # ?꾩옱 extension id. ?뺤옣 愿由ъ옄?먯꽌 寃쎈줈/硫뷀??곗씠?곕? 議고쉶?????ъ슜?쒕떎.
+    SETTING_MENU_PATH = "/exts/morph.hytwin_section_extension/menuPath"
     VIEW_TOOLBAR_ID = "section"
 
     def on_startup(self, ext_id):
         self._ext_id = ext_id
-        # 시스템(예: QuickLayout)에서 창 표시를 요청할 수 있도록 등록해 두고,
-        # 실제 창 객체는 최초 표시 시점에 지연 생성한다.
+        # ?쒖뒪???? QuickLayout)?먯꽌 李??쒖떆瑜??붿껌?????덈룄濡??깅줉???먭퀬,
+        # ?ㅼ젣 李?媛앹껜??理쒖큹 ?쒖떆 ?쒖젏??吏???앹꽦?쒕떎.
         self._window = None
 
-        # 외부(UI/레이아웃 시스템)에서 창 열기 요청이 들어올 수 있도록 show 콜백을 등록한다.
+        # ?몃?(UI/?덉씠?꾩썐 ?쒖뒪???먯꽌 李??닿린 ?붿껌???ㅼ뼱?????덈룄濡?show 肄쒕갚???깅줉?쒕떎.
         ui.Workspace.set_show_window_fn(WINDOW_NAME, partial(self.show_window, None))
         self._toggle_id = ui.Workspace.set_window_visibility_changed_callback(self._visibility_changed_fn)
 
-        # 상단 메뉴에 Section 항목을 등록한다.
+        # ?곷떒 硫붾돱??Section ??ぉ???깅줉?쒕떎.
         settings = carb.settings.get_settings()
         self._menu_path = settings.get(SectionToolExtension.SETTING_MENU_PATH)
         menu_name = self._menu_path.split("/")[-1]
         menu_group = "/".join(self._menu_path.split("/")[:-1])
         self.menu_startup(WINDOW_NAME, menu_name, menu_group)
-        # 현재 뷰포트 툴 변경을 감시해 Section 창 표시 상태를 동기화한다.
+        # ?꾩옱 酉고룷????蹂寃쎌쓣 媛먯떆??Section 李??쒖떆 ?곹깭瑜??숆린?뷀븳??
         self._viewport_current_tool_changed_sub = settings.subscribe_to_node_change_events(
             CURRENT_TOOL_PATH, self._on_view_current_tool_changed
         )
 
         self._stage_sub = get_eventdispatcher().observe_event(
-            observer_name="morph.hytwin_section.startup",
+            observer_name="morph.hytwin_section_extension.startup",
             event_name=omni.usd.get_context().stage_event_name(omni.usd.StageEventType.OPENED),
             on_event=self._on_stage_opened,
         )
@@ -72,33 +72,33 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
             self._window.destroy()
             self._window = None
 
-        # SectionTool singleton이 잡고 있는 scene/리소스를 정리한다.
+        # SectionTool singleton???↔퀬 ?덈뒗 scene/由ъ냼?ㅻ? ?뺣━?쒕떎.
         SectionTool().destroy()
 
         settings = carb.settings.get_settings()
         settings.unsubscribe_to_change_events(self._viewport_current_tool_changed_sub)
         self.menu_shutdown()
-        # omni.ui에 등록한 윈도우 표시 함수를 해제한다.
+        # omni.ui???깅줉???덈룄???쒖떆 ?⑥닔瑜??댁젣?쒕떎.
         ui.Workspace.set_show_window_fn(WINDOW_NAME, None)
         ui.Workspace.remove_window_visibility_changed_callback(self._toggle_id)
 
     def _visibility_changed_fn(self, name: str, visible: bool):
         if name == WINDOW_NAME:
-            # 사용자가 창 우측 상단 X 버튼으로 닫았을 때 호출된다.
+            # ?ъ슜?먭? 李??곗륫 ?곷떒 X 踰꾪듉?쇰줈 ?レ븯?????몄텧?쒕떎.
             self.menu_refresh()
 
-            # OMFP-3552: Section 활성 중에는 툴 충돌을 줄이기 위해 내비게이션 툴 전환을 제어한다.
+            # OMFP-3552: Section ?쒖꽦 以묒뿉????異⑸룎??以꾩씠湲??꾪빐 ?대퉬寃뚯씠?????꾪솚???쒖뼱?쒕떎.
             settings = carb.settings.get_settings()
             TOOL_NAME = WINDOW_NAME
             if visible:
-                # Measure 같은 다른 툴을 강제로 끄지 않도록 navigation 상태에서만 전환한다.
+                # Measure 媛숈? ?ㅻⅨ ?댁쓣 媛뺤젣濡??꾩? ?딅룄濡?navigation ?곹깭?먯꽌留??꾪솚?쒕떎.
                 if settings.get_as_string(CURRENT_TOOL_PATH) == "navigation":
                     settings.set_string(CURRENT_TOOL_PATH, TOOL_NAME)
             elif settings.get_as_string(CURRENT_TOOL_PATH) == TOOL_NAME:
                 settings.set_string(CURRENT_TOOL_PATH, "navigation")
 
     def show_window(self, menu, value):
-        # value=True면 창을 생성/표시, False면 이미 생성된 창만 숨긴다.
+        # value=True硫?李쎌쓣 ?앹꽦/?쒖떆, False硫??대? ?앹꽦??李쎈쭔 ?④릿??
         if value:
             if not self._window:
                 self._window = SectionToolWindow(WINDOW_NAME, self._ext_id)
@@ -113,12 +113,12 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
         if visible:
             self.show_window(None, visible)
         elif current_tool is None or str(current_tool).lower() == "none":
-            # "none"은 모든 도구 비활성 상태이므로 창도 함께 숨긴다.
+            # "none"? 紐⑤뱺 ?꾧뎄 鍮꾪솢???곹깭?대?濡?李쎈룄 ?④퍡 ?④릿??
             self.show_window(None, False)
 
     def _on_stage_opened(self, stage_event):
-        # 새 스테이지가 열리면 섹션 상태를 초기화해 이전 씬 상태가
-        # 다음 세션으로 섞여 들어가지 않도록 한다.
+        # ???ㅽ뀒?댁?媛 ?대━硫??뱀뀡 ?곹깭瑜?珥덇린?뷀빐 ?댁쟾 ???곹깭媛
+        # ?ㅼ쓬 ?몄뀡?쇰줈 ?욎뿬 ?ㅼ뼱媛吏 ?딅룄濡??쒕떎.
         settings = carb.settings.get_settings()
         if settings.get_as_bool(SETTING_SECTION_ENABLED):
             settings.set_bool(SETTING_SECTION_ENABLED, False)
@@ -127,9 +127,10 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
 
 
 def get_instance() -> SectionToolExtension:
-    """`morph.hytwin_section` 확장의 싱글턴 인스턴스를 반환한다.
+    """`morph.hytwin_section_extension` ?뺤옣???깃????몄뒪?댁뒪瑜?諛섑솚?쒕떎.
 
     Returns:
-        SectionToolExtension: 사용 가능하면 인스턴스, 없으면 None.
+        SectionToolExtension: ?ъ슜 媛?ν븯硫??몄뒪?댁뒪, ?놁쑝硫?None.
     """
     return g_singleton
+

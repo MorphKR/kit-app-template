@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 import carb.settings
 import omni.kit.app
@@ -8,8 +8,8 @@ import omni.kit.ui_test as ui_test
 import omni.ui as ui
 import omni.usd as ou
 from omni.kit.ui_test.vec2 import Vec2
-from morph.hytwin_section import get_instance as get_section_instance
-from morph.hytwin_section.common import CURRENT_TOOL_PATH, SETTING_SECTION_ALWAYS_DISPLAY, WINDOW_NAME
+from morph.hytwin_section_extension import get_instance as get_section_instance
+from morph.hytwin_section_extension.common import CURRENT_TOOL_PATH, SETTING_SECTION_ALWAYS_DISPLAY, WINDOW_NAME
 from omni.ui.tests.compare_utils import CompareMetric
 from omni.ui.tests.test_base import OmniUiTest
 
@@ -75,7 +75,7 @@ class TestSection(OmniUiTest):
         prim.GetAttribute("xformOp:translate").Set(position)
 
     async def test_general(self):
-        from morph.hytwin_section.common import SectionManager
+        from morph.hytwin_section_extension.common import SectionManager
 
         """Testing general look of section"""
         # Default with section enabled
@@ -232,7 +232,7 @@ class TestSection(OmniUiTest):
         self.assertTrue(docked)
 
     async def test_section_manager(self):
-        from morph.hytwin_section.common import SectionManager
+        from morph.hytwin_section_extension.common import SectionManager
 
         manager = SectionManager()
 
@@ -287,7 +287,7 @@ class TestSectionExtension(OmniUiTest):
 
     async def test_extension(self):
         manager = omni.kit.app.get_app().get_extension_manager()
-        ext_id = "morph.hytwin_section"
+        ext_id = "morph.hytwin_section_extension"
         self.assertTrue(manager.is_extension_enabled(ext_id))
 
         manager.set_extension_enabled(ext_id, False)
@@ -297,3 +297,4 @@ class TestSectionExtension(OmniUiTest):
         manager.set_extension_enabled(ext_id, True)
         await ui_test.human_delay(5)
         self.assertTrue(manager.is_extension_enabled(ext_id))
+

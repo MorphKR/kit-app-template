@@ -1,8 +1,8 @@
-from pathlib import Path
+﻿from pathlib import Path
 
-# 확장/렌더러 설정 경로 상수
+# ?뺤옣/?뚮뜑???ㅼ젙 寃쎈줈 ?곸닔
 PERSISTENT_SETTINGS_PREFIX = "/persistent"
-SETTING_SECTION_TOOL_ROOT = "/exts/morph.hytwin_section/"
+SETTING_SECTION_TOOL_ROOT = "/exts/morph.hytwin_section_extension/"
 SETTING_SECTION_ALWAYS_DISPLAY = SETTING_SECTION_TOOL_ROOT + "alwaysDisplay"
 SETTING_SECTION_USE_SESSION_LAYER = SETTING_SECTION_TOOL_ROOT + "useSessionLayer"
 
@@ -18,13 +18,14 @@ VIEWPORT_APERTURE_COMFORM_POLICY = "/app/hydra/aperture/conform"
 CURRENT_TOOL_PATH = "/app/viewport/currentTool"
 WINDOW_NAME = "Section"
 
-# 기본 컷 방향(Top=true)
+# 湲곕낯 而?諛⑺뼢(Top=true)
 DEFAULT_SECTION_TOP = True
 
-# Stage 창에서 섹션 보조 prim을 숨기기 위한 메타데이터 키
+# Stage 李쎌뿉???뱀뀡 蹂댁“ prim???④린湲??꾪븳 硫뷀??곗씠????
 HIDE_IN_STAGE_WINDOW = "hide_in_stage_window"
-# UI/씬 렌더링에 사용하는 공통 색상 값
+# UI/???뚮뜑留곸뿉 ?ъ슜?섎뒗 怨듯넻 ?됱긽 媛?
 SECTION_COLOR = 0xFFD9A223
 SECTION_HOVER = 0xFFD9A243
-# RTX cutDirection 설정에서 Top 방향을 의미하는 값
+# RTX cutDirection ?ㅼ젙?먯꽌 Top 諛⑺뼢???섎??섎뒗 媛?
 SECTION_DIRECTION_TOP = 1
+

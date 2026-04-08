@@ -1,19 +1,19 @@
-```{csv-table}
+﻿```{csv-table}
 **Extension**: {{ extension_version }},**Documentation Generated**: {sub-ref}`today`
 ```
 
 # Settings
 
 ## Settings Provided by the Extension
-### exts."morph.hytwin_section".menuPath
+### exts."morph.hytwin_section_extension".menuPath
    - **Default Value**: Tools/Section
    - **Description**: Specifies the menu path where the Section Tool window is inserted within the UI.
 
-### exts."morph.hytwin_section".useSessionLayer
+### exts."morph.hytwin_section_extension".useSessionLayer
    - **Default Value**: True
    - **Description**: Determines whether section editing operations use the session layer of the USD stage.
 
-### exts."morph.hytwin_section".alwaysDisplay
+### exts."morph.hytwin_section_extension".alwaysDisplay
    - **Default Value**: False
    - **Description**: Controls whether the Section Tool window is always displayed irrespective of automatic UI visibility behaviors.
 
@@ -50,3 +50,4 @@
 
 ### SETTING_SECTION_ALWAYS_DISPLAY
    - **Description**: Determines whether the section tool window remains visible at all times, overriding normal UI show/hide behavior.
+

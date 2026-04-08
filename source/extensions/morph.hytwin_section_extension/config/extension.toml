@@ -49,18 +49,18 @@ kit = true
 "omni.kit.viewport.window" = {}
 "omni.kit.menu.utils" = {}
 
-# Main python module this extension provides, it will be publicly available as "import morph.hytwin_section".
+# Main python module this extension provides, it will be publicly available as "import morph.hytwin_section_extension".
 [[python.module]]
-name = "morph.hytwin_section"
+name = "morph.hytwin_section_extension"
 
 [settings]
 # Setting for "Always Display Section"
 # On - section is always displayed
 # Off(default)  - the sections is only displayed when the panel is open.
-exts."morph.hytwin_section".alwaysDisplay = false
-exts."morph.hytwin_section".useSessionLayer = true
+exts."morph.hytwin_section_extension".alwaysDisplay = false
+exts."morph.hytwin_section_extension".useSessionLayer = true
 
-exts."morph.hytwin_section".menuPath = "Tools/Section"
+exts."morph.hytwin_section_extension".menuPath = "Tools/Section"
 
 [documentation]
 pages = ["docs/Overview.md", "docs/SETTINGS.md", "docs/CHANGELOG.md"]
@@ -73,3 +73,4 @@ dependencies = [
     "omni.kit.ui_test",
     "omni.hydra.rtx",
 ]
+

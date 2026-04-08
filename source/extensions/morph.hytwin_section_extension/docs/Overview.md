@@ -1,12 +1,12 @@
-```{csv-table}
+ï»¿```{csv-table}
 **Extension**: {{ extension_version }},**Documentation Generated**: {sub-ref}`today`
 ```
 
 # Overview
 
-**morph.hytwin_section** provides an interactive tool window for managing and manipulating sectional views within the viewport. The extension enables users to create, adjust, and save sectional configurations with intuitive visual controls and custom manipulators. It streamlines section editing by presenting clearly organized panels and interaction tools directly within the Omniverse Kit environment.
+**morph.hytwin_section_extension** provides an interactive tool window for managing and manipulating sectional views within the viewport. The extension enables users to create, adjust, and save sectional configurations with intuitive visual controls and custom manipulators. It streamlines section editing by presenting clearly organized panels and interaction tools directly within the Omniverse Kit environment.
 
-```{image} ../../../../source/extensions/ui/morph.hytwin_section/data/icons/preview.png
+```{image} ../../../../source/extensions/ui/morph.hytwin_section_extension/data/icons/preview.png
 ---
 align: center
 ---
@@ -31,4 +31,5 @@ align: center
 
 - A key setting, "alwaysDisplay", controls whether the section remains visible at all times or only when the tool window is open.
 - The "useSessionLayer" option dictates if section modifications are recorded in the session layer, allowing seamless state management.
-- Configuration options are accessible through the extension?™s settings and integrated menu, enabling users to customize the tool?™s behavior to match their workflow preferences.
+- Configuration options are accessible through the extension?ì…² settings and integrated menu, enabling users to customize the tool?ì…² behavior to match their workflow preferences.
+
