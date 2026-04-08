@@ -41,7 +41,7 @@ ARROW_VI = [i for i in range(sum(ARROW_VC))]
 
 # TODO: Suspect unused code; remove if so
 def flatten(transform):  # pragma: no cover
-    """2차원 배열을 1차원 배열로 평탄화한다."""
+    """2李⑥썝 諛곗뿴??1李⑥썝 諛곗뿴濡??됲깂?뷀븳??"""
     return [item for sublist in transform for item in sublist]
 
 
@@ -100,11 +100,10 @@ class SectionManipulator(sc.Manipulator):
             self._on_hover_end(None)
 
     def on_build(self):
-        """모델이 변경될 때 섹션 평면 도형을 다시 구성한다."""
+        """紐⑤뜽??蹂寃쎈맆 ???뱀뀡 ?됰㈃ ?꾪삎???ㅼ떆 援ъ꽦?쒕떎."""
         if not self.model:  # pragma: no cover
             return
 
-        # 섹션 평면 본체와 테두리 라인을 구성한다.
         self._section = sc.Transform()
         with self._section:
             with sc.Transform(scale_to=sc.Space.SCREEN):
@@ -121,7 +120,6 @@ class SectionManipulator(sc.Manipulator):
                     ],
                 )
 
-                # 테두리 라인(추후 RectangleLine 클래스로 분리 가능)
                 points = [
                     [-SECTION_HEIGHT * 0.5, SECTION_WIDTH * 0.5, 0.0],  # -,+
                     [SECTION_HEIGHT * 0.5, SECTION_WIDTH * 0.5, 0.0],  # +,+
@@ -171,11 +169,9 @@ class SectionManipulator(sc.Manipulator):
         return scTransform
 
     def _on_click_section(self, shape: sc.AbstractShape):
-        # 기본 선택 오퍼레이터와 충돌을 피하기 위해 다음 프레임에 선택을 반영한다.
         asyncio.ensure_future(self.delay_show())
 
     def _on_hover_start(self, _sender):
-        # 호버 중에는 섹션 조작 우선권을 위해 선택/컨텍스트 메뉴 레이어를 잠시 비활성화한다.
         self.__in_hover = True
         if self.__selection_state:
             self.__selection_state.reserve()
@@ -183,14 +179,12 @@ class SectionManipulator(sc.Manipulator):
         get_main_window_cursor().override_cursor_shape(CursorStandardShape.HAND)
 
     def _on_hover_end(self, _sender):
-        # 입력 레이어를 원래 상태로 복구한다.
         if self.__selection_state:
             self.__selection_state.restore()
         get_main_window_cursor().clear_overridden_cursor_shape()
         self.__in_hover = False
 
     async def delay_show(self):
-        # 몇 프레임 대기 후 gizmo를 표시해 클릭 직후 상태 경쟁을 완화한다.
         for i in range(10):
             await omni.kit.app.get_app().next_update_async()
 
@@ -204,8 +198,6 @@ class SectionManipulator(sc.Manipulator):
         else:
             self._selection.clear_selected_prim_paths()
 
-        #### 네이티브 매니퓰레이터 사용
-        #### 참고용으로 이전 구현 스케치를 보존한다.
 
         # if not value:
         #     self._gizmo.clear()

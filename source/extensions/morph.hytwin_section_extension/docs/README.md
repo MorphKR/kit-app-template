@@ -1,133 +1,79 @@
-﻿# Section Tool (`morph.hytwin_section_extension`)
+# Section Tool (`morph.hytwin_section_extension`)
 
-`morph.hytwin_section_extension`? Omniverse Kit 酉고룷?몄뿉???⑤㈃(Section Plane)??
-?앹꽦/議곗옉/?좎??섍린 ?꾪븳 ?뺤옣?낅땲??
-?⑥닚 UI ?쒓났???섏뼱?? viewport蹂?scene ?숆린?붿? USD ?곗씠??諛섏쁺源뚯? ?ы븿?⑸땲??
+`morph.hytwin_section_extension`은 Omniverse Kit 뷰포트에서 섹션(절단 평면)을 생성/정렬/회전/이동할 수 있는 확장입니다.  
+UI 창을 통해 조작할 수도 있고, Python API로 UI 없이 섹션 기능만 실행할 수도 있습니다.
 
-## ?뺤옣???닿껐?섎뒗 臾몄젣
+## 주요 기능
+- `Tools/Section` 메뉴에서 Section Tool 창 실행
+- 섹션 평면 정렬(X/Y/Z), 회전, 절단 방향 반전
+- Prim 경로 기준 섹션 위치 이동
+- 멀티 뷰포트 환경에서 뷰포트별 섹션 객체(`Section_Tool_Object`) 관리
+- Session Layer 기반 편집 지원(`useSessionLayer`)
 
-- ???대?瑜??뺤씤?섍린 ?꾪븳 ?⑤㈃??鍮좊Ⅴ寃?耳쒓퀬 ?꾧퀬 ?띕떎.
-- ?⑤㈃ ?됰㈃??X/Y/Z 異?湲곗??쇰줈 留욎텛嫄곕굹 ?몃??섍쾶 ?뚯쟾?섍퀬 ?띕떎.
-- ?щ윭 酉고룷??遺꾪븷 ?붾㈃)?먯꽌 ?숈씪???뱀뀡 ?꾧뎄瑜??덉젙?곸쑝濡??ъ슜?섍퀬 ?띕떎.
-- Stage瑜??リ굅???ㅼ떆 ?댁뼱???뱀뀡 ?곹깭媛 ?덉쟾?섍쾶 珥덇린?붾릺湲??먰븳??
-- ?먮낯 ?덉씠???ㅼ뿼??以꾩씠湲??꾪빐 Session Layer???묒뾽?섍퀬 ?띕떎.
+## 아키텍처 개요
+- `extension.py`
+  - 확장 시작/종료, 메뉴 등록, 창 표시 콜백 처리
+- `ui/section_tool_window.py`
+  - Section Tool 메인 창
+  - 창 활성화 시 `SectionManager.run_section_runtime()` 호출
+- `common/section_manager.py`
+  - 섹션 prim/variant/transform 관리
+  - UI와 분리된 런타임 실행 함수 제공
+- `tool/section_tool.py`
+  - 뷰포트 scene 동기화 및 표시 제어
+- `tool/section_scene.py`, `tool/section_model.py`, `tool/section_manipulator.py`
+  - viewport별 SceneView/모델/조작기 처리
 
-## 二쇱슂 湲곕뒫
+## UI 실행과 기능 실행 분리
+현재 구현은 다음처럼 분리되어 있습니다.
+- `SectionManager.set_section_enabled()`:
+  - 섹션 설정값만 On/Off (UI 창 제어 안 함)
+- `SectionToolWindow`:
+  - UI가 열릴 때 `SectionManager.run_section_runtime(...)`로 기능 실행
 
-- `Tools/Section` 硫붾돱濡??꾧뎄 李?吏꾩엯
-- `Always Display` 湲곕컲 李??뱀뀡 ?쒖떆 ?뺤콉 ?쒖뼱
-- ?뱀뀡 留ㅻ땲?곕젅?댄꽣 ?쒖떆/?④? ?쒖뼱
-- 鍮좊Ⅸ ?뺣젹(X/Y/Z), 濡쒖뺄 異?湲곗? ?뚯쟾, 而?諛⑺뼢 諛섏쟾
-- ?뱀뀡 prim/variant ?앹꽦 諛??곹깭 愿由?
-- viewport蹂?scene ?앹꽦/?댁젣 ?먮룞 ?숆린??
-- `useSessionLayer` ?ㅼ젙 湲곕컲 ?몄쭛 ?덉씠???좏깮
+즉, UI 경로와 기능 경로를 분리해 사용할 수 있습니다.
 
-## ?꾪궎?띿쿂 援ъ꽦
+## Python API (UI 없이 사용)
+아래 코드는 Script Editor에서 직접 실행할 수 있습니다.
 
-- `extension.py` (`SectionToolExtension`)
-  - ?뺤옣 吏꾩엯??
-  - 硫붾돱 ?깅줉, 李??쒖떆 肄쒕갚 ?깅줉, stage ?대깽???곌껐
-- `ui/section_tool_window.py` (`SectionToolWindow`)
-  - ?꾧뎄 李??섎챸二쇨린 愿由?
-  - ?⑤꼸 UI 援ъ꽦 諛??ㅼ젙 援щ룆
-- `tool/section_tool.py` (`SectionTool`)
-  - ?꾩뿭 scene ?ㅼ??ㅽ듃?덉씠???깃???
-  - viewport 紐⑸줉??媛먯떆?섎ŉ `SectionScene` ?앹꽦/?댁젣
-- `tool/section_scene.py` (`SectionScene`)
-  - ?⑥씪 viewport??`SceneView + SectionManipulator + SectionModel` 臾띠쓬
-- `tool/section_model.py` (`SectionModel`)
-  - ?뱀뀡 transform 異붿쟻 諛?section plane 怨꾩궛
-  - 怨꾩궛 寃곌낵瑜?render product prim ?띿꽦??諛섏쁺
-- `common/section_manager.py` (`SectionManager`)
-  - section prim/variant 諛?transform ?띿꽦 愿由?
+```python
+from morph.hytwin_section_extension.common import SectionManager
 
-## ?숈옉 Flow (?곸꽭)
+# 섹션 기능만 실행(UI 창 없음)
+SectionManager().run_section_only()
 
-### 1) ?뺤옣 ?쒖옉
+# 섹션 기능만 중지(UI 창 없음)
+SectionManager().stop_section_only()
+```
 
-1. Kit媛 ?뺤옣???쒖꽦?뷀븯硫?`SectionToolExtension.on_startup()` ?몄텧
-2. `menuPath` ?ㅼ젙???쎌뼱 `Tools/Section` 硫붾돱 ??ぉ ?깅줉
-3. `Workspace.set_show_window_fn()`?쇰줈 李??쒖떆 肄쒕갚 ?깅줉
-4. ?꾩옱 viewport tool 蹂寃?媛먯떆 諛?stage opened ?대깽??援щ룆 ?쒖옉
+필요 시 gizmo까지 같이 활성화:
 
-### 2) 李??닿린
+```python
+from morph.hytwin_section_extension.common import SectionManager
 
-1. ?ъ슜?먭? 硫붾돱?먯꽌 Section 李쎌쓣 ?대㈃ `show_window(True)` ?ㅽ뻾
-2. 理쒖큹 ?몄텧?대㈃ `SectionToolWindow`瑜?吏???앹꽦
-3. `SectionToolWindow`?먯꽌 UI ?⑤꼸(`OptionsPanel`, `QuickMovePanel`) 鍮뚮뱶
-4. ?ㅼ젙 蹂寃?援щ룆(`SETTING_SECTION_ENABLED`, `SETTING_SECTION_MANIPULATOR`, `SETTING_SECTION_DIRECTION`) ?쒖옉
+SectionManager().run_section_runtime(show_gizmo=True)
+```
 
-### 3) ?뱀뀡 ?쒖꽦??
-
-1. 李??쒖떆 ?먮뒗 ?ㅼ젙 蹂寃쎌쑝濡??뱀뀡 ?쒖꽦???붿껌 諛쒖깮
-2. `SectionTool.set_visibility(True, ext_id)` ?몄텧
-3. ?꾩옱 蹂댁씠??viewport 紐⑸줉???섏쭛??viewport蹂?key ?앹꽦
-4. ?녿뒗 key?????`SectionScene` ?앹꽦
-   - ?대??먯꽌 `SectionModel` ?앹꽦
-   - `SceneView`??`SectionManipulator` ?곌껐
-5. 紐⑤뱺 ?쒖꽦 viewport scene??frame/show ?곹깭 諛섏쁺
-
-### 4) ?됰㈃ 怨꾩궛 諛??뚮뜑 諛섏쁺
-
-1. `SectionModel`???꾩옱 section transform(?꾩튂/?뚯쟾)???쎌쓬
-2. 而?諛⑺뼢 ?ㅼ젙(`Top/Bottom`)?쇰줈 踰뺤꽑 湲곗? 諛⑺뼢 寃곗젙
-3. `n쨌x + d = 0` ?뺥깭濡?section plane 怨꾩닔 怨꾩궛
-4. 怨꾩궛媛믪쓣 viewport??render product prim ?띿꽦
-   (`omni:rtx:scene:sectionPlane:plane`)??湲곕줉
-
-### 5) ?ъ슜??議곗옉
-
-- `QuickMovePanel`
-  - X/Y/Z ?뺣젹 踰꾪듉 -> `SectionManager.align_widget()`
-  - ?뚯쟾 踰꾪듉/媛곷룄 -> `SectionManager.rotate_widget()`
-  - 而?諛⑺뼢 諛섏쟾 -> RTX section 諛⑺뼢 ?ㅼ젙 蹂寃?
-- `SectionManipulator`
-  - ?몃쾭/?대┃ ???좏깮 ?덉씠??異⑸룎??以꾩씠湲??꾪븳 ?곹깭 ?쒖뼱
-  - gizmo ?쒖떆 ??section widget prim ?좏깮 ?곹깭 ?숆린??
-
-### 6) Stage ?대깽??泥섎━
-
-- Stage Opened
-  - 湲곗〈 ?뱀뀡 ?쒖떆 ?곹깭 由ъ뀑
-  - `SectionManager.refresh()` 諛?紐⑤뜽 珥덇린??
-- Stage Closing
-  - 李??④? + ?뱀뀡 鍮꾪솢?깊솕
-  - ?ㅼ젙 援щ룆 ?뺣━
-- Section 愿??prim ??젣 媛먯?
-  - 李??뱀뀡 利됱떆 鍮꾪솢?깊솕 諛??대? ?곹깭 ?뺣━
-
-## 硫?곕럭?ы듃 泥섎━ 諛⑹떇
-
-- viewport ?대쫫 ???媛앹껜 id 湲곕컲 key(`id:<python_id>`)瑜??ъ슜
-- 留?update ?대깽?몄뿉??蹂댁씠??viewport 紐⑸줉???ы룊媛
-- ?좉퇋 viewport媛 ?앷린硫?scene ?먮룞 ?앹꽦
-- ?ロ엺 viewport??scene ?먮룞 ?쒓굅
-- ?뱀뀡 ?쒖떆 ?곹깭??紐⑤뱺 scene???숈씪?섍쾶 ?꾪뙆
-
-## 二쇱슂 ?ㅼ젙
-
+## 주요 설정
 - `exts."morph.hytwin_section_extension".alwaysDisplay`
-  - `true`: 李쎌쓣 ?レ븘???뱀뀡 ?좎?
-  - `false`: 李쎌쓣 ?レ쑝硫??뱀뀡 鍮꾪솢?깊솕
+  - `true`: 창을 닫아도 섹션 표시 유지
+  - `false`: 창 닫힘에 따라 섹션 표시 해제
 - `exts."morph.hytwin_section_extension".useSessionLayer`
-  - `true`: Session Layer??湲곕줉(沅뚯옣)
-  - `false`: Root Layer??湲곕줉
+  - `true`: Session Layer에 편집 기록
+  - `false`: Root Layer에 편집 기록
 - `exts."morph.hytwin_section_extension".menuPath`
-  - 硫붾돱 ?몄텧 寃쎈줈(湲곕낯 `Tools/Section`)
+  - 기본값: `Tools/Section`
 
-## ?몃윭釉붿뒋???ъ씤??
+## 트러블슈팅
+- `ImportError` / `NameError` 발생 시
+  - 확장이 활성화되어 있는지 확인
+  - import 경로 확인:
+    - `from morph.hytwin_section_extension.common import SectionManager`
+- 섹션이 보이지 않을 때
+  - `SETTING_SECTION_ENABLED`, `SETTING_SECTION_MANIPULATOR` 상태 확인
+  - stage 변경 직후라면 한두 프레임 뒤 재시도
 
-- 李쎌? ?⑥?留??뱀뀡????蹂댁엫
-  - `SETTING_SECTION_ENABLED`, `SETTING_SECTION_MANIPULATOR` ?곹깭 ?뺤씤
-- viewport留덈떎 ?숈옉???ㅻ쫫
-  - viewport visibility ?곹깭 諛?scene ?앹꽦 ?щ? ?뺤씤
-- stage ?꾪솚 ???곹깭 瑗ъ엫
-  - stage opened/closing ?대깽?몄뿉??refresh/reset ?몄텧?섎뒗吏 ?뺤씤
-- ?곗씠?곌? ?먮낯 ?덉씠?댁뿉 ?⑥쓬
-  - `useSessionLayer` ?ㅼ젙??`true`?몄? ?뺤씤
-
-## 媛쒕컻 李멸퀬
-
-- 肄붾뱶 猷⑦듃: `morph/hytwin_section`
-- ?몃? 臾몄꽌: `docs/Overview.md`, `docs/SETTINGS.md`, `docs/CHANGELOG.md`
-
+## 관련 문서
+- `docs/Overview.md`
+- `docs/SETTINGS.md`
+- `docs/CHANGELOG.md`
