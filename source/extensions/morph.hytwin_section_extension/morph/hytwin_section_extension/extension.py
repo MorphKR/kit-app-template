@@ -26,10 +26,12 @@ g_singleton = None
 
 class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
 
+    """이 모듈의 주요 기능을 구성하는 클래스다."""
     SETTING_MENU_PATH = "/exts/morph.hytwin_section_extension/menuPath"
     VIEW_TOOLBAR_ID = "section"
 
     def on_startup(self, ext_id):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self._ext_id = ext_id
 
         self._window = None
@@ -59,6 +61,7 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
         g_singleton = self
 
     def on_shutdown(self):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         global g_singleton
         g_singleton = None
 
@@ -77,6 +80,7 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
         ui.Workspace.remove_window_visibility_changed_callback(self._toggle_id)
 
     def _visibility_changed_fn(self, name: str, visible: bool):
+        """해당 함수의 핵심 로직을 수행한다."""
         if name == WINDOW_NAME:
 
             self.menu_refresh()
@@ -93,6 +97,7 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
 
     def show_window(self, menu, value):
 
+        """표시 상태를 변경하고 연관 상태를 동기화한다."""
         if value:
             if not self._window:
                 self._window = SectionToolWindow(WINDOW_NAME, self._ext_id)
@@ -102,6 +107,7 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
             self._window.show(False)
 
     def _on_view_current_tool_changed(self, item, *_):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         current_tool = carb.dictionary.get_dictionary().get(item)
         visible = current_tool == SectionToolExtension.VIEW_TOOLBAR_ID
         if visible:
@@ -112,6 +118,7 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
 
     def _on_stage_opened(self, stage_event):
 
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         settings = carb.settings.get_settings()
         if settings.get_as_bool(SETTING_SECTION_ENABLED):
             settings.set_bool(SETTING_SECTION_ENABLED, False)
@@ -120,4 +127,5 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
 
 
 def get_instance() -> SectionToolExtension:
+    """현재 상태에서 필요한 값을 조회해 반환한다."""
     return g_singleton

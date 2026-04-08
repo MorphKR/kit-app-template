@@ -38,6 +38,7 @@ from omni.kit.widget.settings import (
 
 
 class SectionSettingsWidgetBuilder(SettingsWidgetBuilder):
+    """이 모듈의 주요 기능을 구성하는 클래스다."""
     DEFAULT_SETTINGS = {
         SETTING_SECTION_DIRECTION: SECTION_DIRECTION_TOP,
         SETTING_SECTION_MANIPULATOR: True,
@@ -47,6 +48,7 @@ class SectionSettingsWidgetBuilder(SettingsWidgetBuilder):
 
     @classmethod
     def _get_default(cls, path: str) -> Any:
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         if path in SectionSettingsWidgetBuilder.DEFAULT_SETTINGS:
             return SectionSettingsWidgetBuilder.DEFAULT_SETTINGS[path]
         else:  # pragma: no cover
@@ -56,6 +58,7 @@ class SectionSettingsWidgetBuilder(SettingsWidgetBuilder):
     # TODO: Suspect unused code; remove if so
     @classmethod
     def _restore_defaults(cls, path: str, button=None) -> None:  # pragma: no cover
+        """해당 함수의 핵심 로직을 수행한다."""
         default_setting = cls._get_default(path)
         carb.settings.get_settings().set(path, default_setting)
         if button:
@@ -63,7 +66,9 @@ class SectionSettingsWidgetBuilder(SettingsWidgetBuilder):
 
 
 class OptionsPanel(ExpandPanel):
+    """패널 UI 구성과 사용자 입력 처리를 담당한다."""
     def __init__(self):
+        """인스턴스의 초기 상태를 구성한다."""
         section_default_direction = SectionSettingsWidgetBuilder._get_default(SETTING_SECTION_DIRECTION)
         section_default_manipulator = SectionSettingsWidgetBuilder._get_default(SETTING_SECTION_MANIPULATOR)
         section_default_enable = SectionSettingsWidgetBuilder._get_default(SETTING_SECTION_ENABLED)
@@ -78,6 +83,7 @@ class OptionsPanel(ExpandPanel):
         super().__init__("Options", 0, True)
 
     def build_panel(self):
+        """UI 위젯 트리를 구성한다."""
         with ui.VStack(spacing=PANEL_SPACING_Y):
             with ui.HStack():
                 ui.Spacer(width=PANEL_PADDING_INNER_X)
@@ -88,6 +94,7 @@ class OptionsPanel(ExpandPanel):
     def _add_setting(
         self, setting_type, name: str, path: str, range_from=0, range_to=0, speed=1, has_reset=True, tooltip=""
     ):
+        """해당 함수의 핵심 로직을 수행한다."""
         try:
             saved_checkbox_alignment = SettingsWidgetBuilder.checkbox_alignment
             saved_checkbox_alignment_set = SettingsWidgetBuilder.checkbox_alignment_set

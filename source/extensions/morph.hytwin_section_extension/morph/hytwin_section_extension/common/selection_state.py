@@ -20,7 +20,9 @@ CONTEXT_MENU_SETTINGS = "/exts/omni.kit.window.viewport/showContextMenu"
 
 
 class SelectionState:
+    """이 모듈의 주요 기능을 구성하는 클래스다."""
     def __init__(self, viewport_window: ViewportWindow):
+        """인스턴스의 초기 상태를 구성한다."""
         self.__settings = get_settings()
         self.__layers_state: Dict = {}
         self.__layers: Dict = {
@@ -32,6 +34,7 @@ class SelectionState:
         self.__ctx_menu_restore = ctx_menu_enabled if ctx_menu_enabled is not None else True
 
     def destroy(self):
+        """사용한 구독과 리소스를 정리한다."""
         self.restore()
         for key in self.__layers:
             self.__layers[key] = None
@@ -39,6 +42,7 @@ class SelectionState:
     # TODO: Suspect unused code; remove if so
     @property
     def enabled(self) -> bool:  # pragma: no cover
+        """해당 함수의 핵심 로직을 수행한다."""
         sel_layer = self.__layers["Selection"]
         ctx_layer = self.__layers["ContextMenu"]
 
@@ -51,6 +55,7 @@ class SelectionState:
 
     @enabled.setter
     def enabled(self, value: bool) -> None:
+        """해당 함수의 핵심 로직을 수행한다."""
         self.__settings.set(CONTEXT_MENU_SETTINGS, value)
 
         for key in self.__layers:
@@ -59,12 +64,11 @@ class SelectionState:
                 item.visible = value
 
     def restore(self):
-        """
-        酉고룷???덉씠?댁? 而⑦뀓?ㅽ듃 硫붾돱 ?ㅼ젙??珥덇린 ?곹깭濡?蹂듦뎄?쒕떎.
-        """
+        """저장한 상태를 복구한다."""
         self.enabled = True
         self.__settings.set(CONTEXT_MENU_SETTINGS, self.__ctx_menu_restore)
 
     def reserve(self):
+        """복구를 위해 현재 상태를 저장한다."""
         ctx_menu_enabled = self.__settings.get(CONTEXT_MENU_SETTINGS)
         self.__ctx_menu_restore = ctx_menu_enabled if ctx_menu_enabled is not None else True

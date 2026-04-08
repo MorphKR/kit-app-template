@@ -26,12 +26,16 @@ ATTR_SECTION_TRANSFORM = "xformOp:transform"
 
 
 class SectionModel(sc.AbstractManipulatorModel):
+    """섹션 변환 데이터를 추적하고 평면 값을 갱신한다."""
     class TransformItem(sc.AbstractManipulatorItem):
+        """이 모듈의 주요 기능을 구성하는 클래스다."""
         def __init__(self):
+            """인스턴스의 초기 상태를 구성한다."""
             super().__init__()
             self.value = Gf.Matrix4d()
 
     def __init__(self, viewport_key: str = None, viewport_window=None):
+        """인스턴스의 초기 상태를 구성한다."""
         super().__init__()
         self._usd_context = omni.usd.get_context()
         self._settings = carb.settings.get_settings()
@@ -54,9 +58,11 @@ class SectionModel(sc.AbstractManipulatorModel):
         self._usd_listener = Tf.Notice.Register(Usd.Notice.ObjectsChanged, self._on_usd_changed, stage)
 
     def __del__(self):  # pragma: no cover
+        """사용한 구독과 리소스를 정리한다."""
         self.destroy()
 
     def destroy(self):  # pragma: no cover
+        """사용한 구독과 리소스를 정리한다."""
         if self._stage_sub:
             get_eventdispatcher().unobserve_event(self._stage_sub)
             self._stage_sub = None
@@ -66,6 +72,7 @@ class SectionModel(sc.AbstractManipulatorModel):
         self._viewport_window = None
 
     def refresh(self):
+        """현재 상태를 다시 계산하고 갱신한다."""
         self._set_section_plane([0, 0, 0, 0])
         self._usd_listener = None
         self._transform.value = Gf.Matrix4d()
@@ -73,17 +80,21 @@ class SectionModel(sc.AbstractManipulatorModel):
         self._usd_listener = Tf.Notice.Register(Usd.Notice.ObjectsChanged, self._on_usd_changed, stage)
 
     def get_item(self, identifier):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         return self._transform
 
     def get_as_floats(self, item):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         return self._transform.value
 
     def _get_section_edit_context(self):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         stage = omni.usd.get_context().get_stage()
         sect_layer = self._get_section_layer()
         return Usd.EditContext(stage, sect_layer)
 
     def _get_section_layer(self):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         settings = carb.settings.get_settings()
         use_session_layer = settings.get(SETTING_SECTION_USE_SESSION_LAYER)
         stage = omni.usd.get_context().get_stage()
@@ -92,6 +103,7 @@ class SectionModel(sc.AbstractManipulatorModel):
         return stage.GetRootLayer()
 
     def set_floats(self, item, value):
+        """입력값을 내부 상태와 설정에 반영한다."""
         with self._get_section_edit_context():
             if not value:
                 return
@@ -101,6 +113,7 @@ class SectionModel(sc.AbstractManipulatorModel):
             self._item_changed(self._transform)
 
     def _on_usd_changed(self, notice, stage):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         with self._get_section_edit_context():
             section_transform_attr = SectionManager().get_transform_attr(viewport_key=self._viewport_key)
             if not section_transform_attr:
@@ -111,10 +124,12 @@ class SectionModel(sc.AbstractManipulatorModel):
                 self.set_floats(self._transform, section_transform_attr.Get())
 
     def _on_stage_closing(self, _):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self.refresh()
         omni.usd.get_context().set_pending_edit(False)
 
     def _set_section_plane(self, value: list):
+        """입력값을 내부 상태와 설정에 반영한다."""
         try:
             stage = omni.usd.get_context().get_stage()
             viewport_api = self._viewport_window.viewport_api if self._viewport_window else None
@@ -130,6 +145,7 @@ class SectionModel(sc.AbstractManipulatorModel):
             carb.log_warn(f"Failed to set section plane attribute: {e}")
 
     def update_section_plane(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         with self._get_section_edit_context():
 
             if self._settings.get_as_int(SETTING_SECTION_DIRECTION) == SECTION_DIRECTION_TOP:

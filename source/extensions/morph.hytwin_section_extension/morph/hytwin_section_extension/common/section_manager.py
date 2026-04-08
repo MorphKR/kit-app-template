@@ -40,11 +40,13 @@ VIEW_LAYER_EXT = ".view.usd"
 
 
 class CutDirection:
+    """이 모듈의 주요 기능을 구성하는 클래스다."""
     Top = "Top"
     Bottom = "Bottom"
 
 
 class WidgetAlignment:
+    """이 모듈의 주요 기능을 구성하는 클래스다."""
     X = "x"
     Y = "y"
     Z = "z"
@@ -52,8 +54,9 @@ class WidgetAlignment:
 
 @Singleton
 class SectionManager:
-    """섹션 prim/variant와 transform 편집을 담당하는 중앙 매니저."""
+    """섹션 상태와 런타임 동작을 중앙에서 관리한다."""
     def __init__(self):
+        """인스턴스의 초기 상태를 구성한다."""
         self._section_variants = None
         self._last_variant_id = 0
         self._on_added_section_fn = None
@@ -64,22 +67,27 @@ class SectionManager:
         self.refresh()
 
     def __del__(self):  # pragma: no cover
+        """사용한 구독과 리소스를 정리한다."""
         self.destroy()
 
     def destroy(self):
+        """사용한 구독과 리소스를 정리한다."""
         self._settings = None
         self._on_added_section_fn = None
         self._bboxcache = None
 
     @property
     def section_names(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         return list(self._section_variants.keys())
 
     @property
     def section_count(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         return len(self._section_variants) if self._section_variants else 0
 
     def clear(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         if self._section_variants:
             with self._get_section_edit_context():
                 if self._stage and self._stage.GetPrimAtPath(f"{SECTION_TOOL_PATH}{SECTION_PRIM_PATH}"):
@@ -94,22 +102,17 @@ class SectionManager:
         self._section_transform_attr = None
 
     def refresh(self):
-        """현재 stage를 다시 읽어 섹션 캐시를 초기화/재구성한다."""
+        """현재 상태를 다시 계산하고 갱신한다."""
         self.clear()
         self._stage = omni.usd.get_context().get_stage()
         self._load_section_variants()
 
     def set_added_section_callback(self, cb: callable):
+        """입력값을 내부 상태와 설정에 반영한다."""
         self._on_added_section_fn = cb
 
-    def set_section_enabled(self, enabled: bool) -> None:
-        """RTX 섹션 기능 활성화 상태를 설정한다(UI 표시와는 분리)."""
-        if not self._settings:
-            return
-        self._settings.set_bool(SETTING_SECTION_ENABLED, bool(enabled))
-
     def is_section_enabled(self) -> bool:
-        """RTX 섹션 기능 활성화 상태를 반환한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         if not self._settings:
             return False
         return self._settings.get_as_bool(SETTING_SECTION_ENABLED)
@@ -117,6 +120,7 @@ class SectionManager:
     def _resolve_ext_id(self) -> str:
         # 런타임에서 extension instance가 있으면 ext_id를 우선 사용하고,
         # 없으면 고정 extension 이름으로 fallback 한다.
+        """해당 함수의 핵심 로직을 수행한다."""
         try:
             from .. import get_instance
 
@@ -128,16 +132,10 @@ class SectionManager:
         return "morph.hytwin_section_extension"
 
     def run_section_runtime(self, ext_id: str = None, show_gizmo: bool = True) -> bool:
-        """
-        UI 창 표시 여부와 무관하게 섹션 런타임을 실행한다.
-        - 섹션 기능 ON
-        - 조작기 ON
-        - 섹션이 없으면 기본 섹션 생성
-        - viewport scene/gizmo 표시
-        """
+        """런타임 실행 경로를 시작한다."""
         ext_id = (ext_id or "").strip() or self._resolve_ext_id()
 
-        self.set_section_enabled(True)
+        self._settings.set_bool(SETTING_SECTION_ENABLED, True)
         self._settings.set_bool(SETTING_SECTION_MANIPULATOR, True)
 
         if self.section_count == 0:
@@ -151,21 +149,15 @@ class SectionManager:
         return True
 
     def run_section_only(self, ext_id: str = None) -> bool:
-        """
-        UI 창을 열지 않고 섹션 기능만 실행한다.
-        (gizmo 자동 표시 없음)
-        """
+        """런타임 실행 경로를 시작한다."""
         return self.run_section_runtime(ext_id=ext_id, show_gizmo=False)
 
     def stop_section_only(self, ext_id: str = None) -> bool:
-        """
-        UI 창과 분리해서 섹션 기능만 중지한다.
-        (조작기/scene/gizmo 숨김 + 섹션 기능 OFF)
-        """
+        """실행 중인 런타임 경로를 중지한다."""
         ext_id = (ext_id or "").strip() or self._resolve_ext_id()
 
         self._settings.set_bool(SETTING_SECTION_MANIPULATOR, False)
-        self.set_section_enabled(False)
+        self._settings.set_bool(SETTING_SECTION_ENABLED, False)
 
         from ..tool import SectionTool
 
@@ -174,7 +166,7 @@ class SectionManager:
         return True
 
     def add_section(self):
-        """현재 위젯 상태를 기준으로 새 섹션 variant를 추가/저장한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         with self._get_section_edit_context():
 
             section = self._get_section_from_widget(is_new=True)
@@ -191,7 +183,7 @@ class SectionManager:
             self.save_section(section["name"])
 
     def align_widget(self, align):
-        """선택된 섹션 위젯을 X/Y/Z 기준 평면 방향으로 정렬한다."""
+        """선택한 축 기준으로 섹션을 정렬한다."""
         with self._get_section_edit_context():
             transform_attr = self._resolve_target_transform_attr()
             if not transform_attr:  # pragma: no cover
@@ -207,7 +199,7 @@ class SectionManager:
             transform_attr.Set(transform)
 
     def rotate_widget(self, align, angle):
-        """선택된 섹션 위젯을 로컬 축 기준으로 회전한다."""
+        """현재 축과 각도 설정으로 섹션을 회전한다."""
         with self._get_section_edit_context():
             transform_attr = self._resolve_target_transform_attr()
             if transform_attr:
@@ -227,7 +219,7 @@ class SectionManager:
                 transform_attr.Set(transform)
 
     def set_widget_position(self, position):
-        """선택된 섹션 위젯의 월드 위치를 설정한다."""
+        """입력값을 내부 상태와 설정에 반영한다."""
         with self._get_section_edit_context():
             transform_attr = self._resolve_target_transform_attr()
             if transform_attr:
@@ -236,9 +228,11 @@ class SectionManager:
                 transform_attr.Set(transform)
 
     def _is_section_widget_path(self, prim_path: str) -> bool:
+        """해당 함수의 핵심 로직을 수행한다."""
         return bool(prim_path and str(prim_path).endswith(SECTION_PRIM_PATH))
 
     def _get_selected_section_transform_attr(self):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         usd_context = omni.usd.get_context()
         selection = usd_context.get_selection() if usd_context else None
         if not selection:
@@ -259,6 +253,7 @@ class SectionManager:
         # 우선순위:
         # 1) 현재 선택된 Section_Tool_Object
         # 2) 캐시된 기본 transform attribute
+        """해당 함수의 핵심 로직을 수행한다."""
         selected_attr = self._get_selected_section_transform_attr()
         if selected_attr:
             return selected_attr
@@ -271,7 +266,7 @@ class SectionManager:
         return None
 
     def set_widget_position_from_prim_path(self, prim_path: str) -> bool:
-        """입력 prim 경로의 중심점으로 섹션 위젯을 이동한다."""
+        """입력값을 내부 상태와 설정에 반영한다."""
         if not prim_path:
             carb.log_warn("[SectionTool] set_widget_position_from_prim_path: empty prim path")
             return False
@@ -302,6 +297,7 @@ class SectionManager:
 
     def _get_prim_world_center(self, prim):
         # 1순위: 월드 바운딩박스 중심점
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         try:
             bound = self._bboxcache.ComputeWorldBound(prim).ComputeAlignedRange()
             if bound and not bound.IsEmpty():
@@ -318,6 +314,7 @@ class SectionManager:
             return None
 
     def _get_next_available_name(self):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         self._last_variant_id += 1
         if self._last_variant_id > 999:
             self._last_variant_id = 1
@@ -329,7 +326,7 @@ class SectionManager:
         return name
 
     def _add_section_internal(self, section):
-        """섹션 정보를 variant set에 실제로 추가한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         with self._get_section_edit_context():
             variant_set = self._get_section_variant_set(create_if_not_exist=True)
             if variant_set is None:  # pragma: no cover
@@ -352,7 +349,7 @@ class SectionManager:
             return section
 
     def _set_section_attribute(self, name, value, type_name):
-        """섹션 위젯 prim에 커스텀 속성을 설정한다."""
+        """입력값을 내부 상태와 설정에 반영한다."""
         with self._get_section_edit_context():
             if not self._widget_prim:
                 return
@@ -363,7 +360,7 @@ class SectionManager:
             attribute.Set(value)
 
     def _get_section_attribute(self, name, default):
-        """섹션 위젯 prim의 커스텀 속성을 조회한다."""
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         with self._get_section_edit_context():
             if self._widget_prim and self._widget_prim.HasAttribute(name):
                 attribute = self._widget_prim.GetAttribute(name)
@@ -374,31 +371,35 @@ class SectionManager:
 
     # TODO: Suspect unused code; remove if so
     def _clear_section_attribute(self, name):  # pragma: no cover
+        """해당 함수의 핵심 로직을 수행한다."""
         if self._widget_prim.HasAttribute(name):
             attribute = self._widget_prim.GetAttribute(name)
             attribute.Clear()
 
     def _set_light(self, value):
+        """입력값을 내부 상태와 설정에 반영한다."""
         self._set_section_attribute(ATTR_SECTION_LIGHT, value, Sdf.ValueTypeNames.Bool)
 
     # TODO: Suspect unused code; remove if so
     def _get_light(self):  # pragma: no cover
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         return self._get_section_attribute(ATTR_SECTION_LIGHT, False)
 
     # TODO: Suspect unused code; remove if so
     def _clear_light(self):  # pragma: no cover
+        """해당 함수의 핵심 로직을 수행한다."""
         self._clear_section_attribute(ATTR_SECTION_LIGHT)
 
     def set_direction(self, value):
-        """절단 방향(Top/Bottom)을 설정한다."""
+        """입력값을 내부 상태와 설정에 반영한다."""
         self._set_section_attribute(ATTR_SECTION_DIRECTION, value, Sdf.ValueTypeNames.Bool)
 
     def get_direction(self):
-        """절단 방향(Top/Bottom)을 반환한다."""
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         return self._get_section_attribute(ATTR_SECTION_DIRECTION, DEFAULT_SECTION_TOP)
 
     def _create_section_spawn_point(self) -> Gf.Vec3d:
-        """활성 카메라 전방 위치를 새 섹션 생성 위치로 계산한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
 
         camera_path = get_active_viewport_camera_path()
         camera_state = ViewportCameraState(camera_path)
@@ -419,11 +420,12 @@ class SectionManager:
 
     # TODO: Suspect unused code; remove if so
     def _clear_direction(self):  # pragma: no cover
+        """해당 함수의 핵심 로직을 수행한다."""
         with self._get_section_edit_context():
             self._clear_section_attribute(ATTR_SECTION_DIRECTION)
 
     def get_transform_attr(self, viewport_key: str = None):
-        """섹션 위젯 transform attribute를 반환한다(뷰포트 키 지원)."""
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         with self._get_section_edit_context():
             if viewport_key:
                 widget_prim = self.get_section_widget_prim(create_if_not_exist=True, viewport_key=viewport_key)
@@ -435,7 +437,7 @@ class SectionManager:
             return None
 
     def _load_section_variants(self):
-        """stage에 저장된 섹션 variant 목록을 로드한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         with self._get_section_edit_context():
             self._section_variants = {}
             self._section_files = {}
@@ -458,7 +460,7 @@ class SectionManager:
                         self._last_variant_id = number
 
     def save_section(self, name):
-        """현재 위젯 상태를 지정한 variant 이름으로 저장한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         with self._get_section_edit_context():
             if name not in self._section_variants:  # pragma: no cover
                 carb.log_error(f"[SectionTool] {name} not found in variants")
@@ -484,7 +486,7 @@ class SectionManager:
             return section
 
     def _get_section_from_widget(self, name=None, is_new: bool = False):
-        """현재 위젯 상태를 dict 구조의 섹션 데이터로 변환한다."""
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         with self._get_section_edit_context():
             widget_prim = self.get_section_widget_prim(create_if_not_exist=True)
 
@@ -509,7 +511,7 @@ class SectionManager:
             return section
 
     def _get_section_variant_set(self, create_if_not_exist=False):
-        """섹션 variant set을 가져오거나 필요 시 생성한다."""
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         with self._get_section_edit_context():
             if not self._stage:  # pragma: no cover
                 return None
@@ -528,19 +530,19 @@ class SectionManager:
 
             return self._section_variant_set
     def _sanitize_viewport_key(self, viewport_key: str) -> str:
-        """USD path 안전성을 위해 viewport key 문자열을 정규화한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         safe = re.sub(r"[^a-zA-Z0-9_]", "_", str(viewport_key or "default"))
         return safe.strip("_") or "default"
 
     def _get_section_widget_path(self, section_tool_path: str, viewport_key: str = None) -> str:
-        """뷰포트 키 기준 Section_Tool_Object 경로를 생성한다."""
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         if not viewport_key:
             return section_tool_path + SECTION_PRIM_PATH
         safe_key = self._sanitize_viewport_key(viewport_key)
         return f"{section_tool_path}/{safe_key}{SECTION_PRIM_PATH}"
 
     def get_section_widget_prim(self, create_if_not_exist=False, viewport_key: str = None):
-        """Section_Tool_Object prim을 조회/생성하고 transform op를 보장한다."""
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         with self._get_section_edit_context():
             if self._widget_prim and not viewport_key:
                 return self._widget_prim
@@ -583,7 +585,7 @@ class SectionManager:
             return widget_prim
 
     def _get_section_tool_path(self):
-        """섹션 루트 prim 경로를 반환한다(구버전 경로 호환 포함)."""
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         with self._get_section_edit_context():
             if self._stage.HasDefaultPrim():
                 defaultPath = self._stage.GetDefaultPrim().GetPath().pathString
@@ -593,13 +595,13 @@ class SectionManager:
             return SECTION_TOOL_PATH
 
     def _get_section_edit_context(self):
-        """섹션 편집용 USD EditContext(Session/Root layer)를 반환한다."""
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         stage = omni.usd.get_context().get_stage()
         sect_layer = self._get_section_layer()
         return Usd.EditContext(stage, sect_layer)
 
     def _get_section_layer(self):
-        """useSessionLayer 설정에 따라 편집 대상 레이어를 선택한다."""
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         settings = carb.settings.get_settings()
         use_session_layer = settings.get(SETTING_SECTION_USE_SESSION_LAYER)
         stage = omni.usd.get_context().get_stage()
@@ -609,7 +611,7 @@ class SectionManager:
             return stage.GetRootLayer()
 
     def get_center_of_prims(self, prim_paths: list):
-        """복수 prim의 월드 바운딩박스 중심점을 계산한다."""
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         with self._get_section_edit_context():
             all_bound = Gf.Range3d()
             if isinstance(prim_paths, list) and len(prim_paths) > 0:

@@ -17,18 +17,21 @@ from ..common import DEFAULT_SECTION_TOP, SETTING_SECTION_DIRECTION, SectionMana
 from .constant import CONTROL_HEIGHT, PANEL_PADDING_INNER_X, PANEL_SPACING_Y
 
 AXISES = ["X", "Y", "Z"]
-ROTATION_DEGREES_STRING = ["5째", "10째", "15째", "30째", "45째", "90째"]
+ROTATION_DEGREES_STRING = ["5", "10", "15", "30", "45", "90"]
 ROTATION_DEGREES_NUMBER = ["5", "10", "15", "30", "45", "90"]
 
 
 class QuickMovePanel(ExpandPanel):
+    """패널 UI 구성과 사용자 입력 처리를 담당한다."""
     def __init__(self):
+        """인스턴스의 초기 상태를 구성한다."""
         super().__init__("Quick Move", 0, True)
 
         self._settings = carb.settings.get_settings()
         self._target_buttons_frame = None
 
     def build_panel(self):
+        """UI 위젯 트리를 구성한다."""
         with ui.VStack():
             with ui.HStack(height=CONTROL_HEIGHT):
                 ui.Spacer(width=PANEL_PADDING_INNER_X)
@@ -145,21 +148,27 @@ class QuickMovePanel(ExpandPanel):
         self._degree_combobox.model.current_index = 4
 
     def _align_x(self):
+        """선택한 축 기준으로 섹션을 정렬한다."""
         SectionManager().align_widget(WidgetAlignment.X)
 
     def _align_y(self):
+        """선택한 축 기준으로 섹션을 정렬한다."""
         SectionManager().align_widget(WidgetAlignment.Y)
 
     def _align_z(self):
+        """선택한 축 기준으로 섹션을 정렬한다."""
         SectionManager().align_widget(WidgetAlignment.Z)
 
     def _on_rotate_clockwise(self):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self._rotate(True)
 
     def _on_rotate_counter_clockwise(self):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self._rotate(False)
 
     def _rotate(self, clockwise):
+        """현재 축과 각도 설정으로 섹션을 회전한다."""
         if self._rotation_axis == "X":
             align = WidgetAlignment.X
         elif self._rotation_axis == "Y":
@@ -172,18 +181,22 @@ class QuickMovePanel(ExpandPanel):
         SectionManager().rotate_widget(align, angle)
 
     def _on_axis_changed(self, model, item):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         index = model.get_item_value_model().as_int
         self._rotation_axis = AXISES[index]
 
     def _on_degree_changed(self, model, item):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         index = model.get_item_value_model().as_int
         self._rotation_degree = ROTATION_DEGREES_NUMBER[index]
 
     def _inverse_cut_direction(self) -> None:
+        """해당 함수의 핵심 로직을 수행한다."""
         new_direction = 1 - self._settings.get(SETTING_SECTION_DIRECTION)
         self._settings.set(SETTING_SECTION_DIRECTION, new_direction)
 
     def _move_to_prim_path(self, prim_path: str = "") -> None:
+        """해당 함수의 핵심 로직을 수행한다."""
         prim_path = (prim_path or "").strip()
 
         if not prim_path:
@@ -196,6 +209,7 @@ class QuickMovePanel(ExpandPanel):
             carb.log_warn(f"[SectionTool] Prim not found or invalid: {prim_path}")
 
     def _get_section_tool_object_paths(self):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         stage = omni.usd.get_context().get_stage()
         if not stage:
             return []
@@ -208,10 +222,12 @@ class QuickMovePanel(ExpandPanel):
         return sorted(result)
 
     def _select_section_target(self, section_path: str):
+        """해당 함수의 핵심 로직을 수행한다."""
         selection = omni.usd.get_context().get_selection()
         selection.set_selected_prim_paths([section_path], True)
 
     def _build_target_buttons(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         with ui.VStack(spacing=6):
             paths = self._get_section_tool_object_paths()
             if not paths:
@@ -227,5 +243,6 @@ class QuickMovePanel(ExpandPanel):
                 )
 
     def _refresh_target_buttons(self):
+        """현재 상태를 다시 계산하고 갱신한다."""
         if self._target_buttons_frame:
             self._target_buttons_frame.rebuild()

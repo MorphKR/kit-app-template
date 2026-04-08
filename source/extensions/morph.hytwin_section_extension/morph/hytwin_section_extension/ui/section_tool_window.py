@@ -40,12 +40,9 @@ TRANSFORM_OP_SETTING = "/app/transform/operation"
 
 
 class SectionToolWindow(ui.Window):
-    """Section Tool 메인 UI 창.
-
-    - 창 표시/숨김과 섹션 실행 흐름을 연결
-    - 설정 구독을 통해 섹션 상태와 UI를 동기화
-    """
+    """도구 창 UI 생명주기와 표시 상태를 관리한다."""
     def __init__(self, title: str, ext_id: str):
+        """인스턴스의 초기 상태를 구성한다."""
         super().__init__(title, resizable=True, padding_x=8, padding_y=8, auto_resize=True)
 
         self._ext_id = ext_id
@@ -87,7 +84,7 @@ class SectionToolWindow(ui.Window):
         self.set_docked_changed_fn(self._on_dock_changed)
 
     def __on_stage_objects_changed(self, notice, stage):
-        """Stage에서 섹션 prim이 삭제되면 내부 상태와 UI를 정리한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         if not notice:  # pragma: no cover
             return
         for path in notice.GetResyncedPaths():
@@ -101,7 +98,7 @@ class SectionToolWindow(ui.Window):
                     SectionTool().set_visibility(False, self._ext_id)
 
     def destroy(self):
-        """구독/참조를 정리하고 창 리소스를 해제한다."""
+        """사용한 구독과 리소스를 정리한다."""
         self.visible = False
         SectionManager().set_added_section_callback(None)
         self._stop_dirty_listen()
@@ -117,6 +114,7 @@ class SectionToolWindow(ui.Window):
         super().destroy()
 
     def dock(self, window_name: str, ratio: float = 0.311, position=ui.DockPosition.SAME):
+        """해당 함수의 핵심 로직을 수행한다."""
         if not self.docked:  # pragma: no cover
             window = ui.Workspace.get_window(window_name)
             if window:
@@ -124,13 +122,15 @@ class SectionToolWindow(ui.Window):
         return self.docked
 
     def _on_dock_changed(self, docked: bool):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self.auto_resize = docked
 
     def is_visible(self) -> bool:
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         return self.visible
 
     def _on_visibility_changed(self, visible: bool) -> None:
-        """창 표시 상태 변경 시 섹션 런타임 실행/중지를 처리한다."""
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         if visible:
             self.frame.rebuild()
             SectionManager().run_section_runtime(ext_id=self._ext_id, show_gizmo=True)
@@ -140,26 +140,28 @@ class SectionToolWindow(ui.Window):
             SectionTool().show_section_gizmo(False)
 
     def show(self, visible, *_):
+        """표시 상태를 변경하고 연관 상태를 동기화한다."""
         self.visible = visible
 
     def set_active(self, active: bool):
-        """섹션 enabled 설정값을 UI 상태와 함께 반영한다."""
+        """입력값을 내부 상태와 설정에 반영한다."""
         if self._section_enabled != active:
             self._section_enabled = active
             self._settings.set_bool(SETTING_SECTION_ENABLED, active)
 
     def get_active(self):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         return self._section_enabled
 
     def enable_section(self, enable: bool) -> None:
-        """섹션 기능 및 조작기(manipulator) 설정을 함께 제어한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         self.set_active(enable)
 
         if enable != self._manipulator_visible:
             self._settings.set(SETTING_SECTION_MANIPULATOR, enable)
 
     def _on_section_enabled(self):
-        """enabled 설정 변경 시 섹션 데이터/표시 상태를 동기화한다."""
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self._section_enabled = self._settings.get_as_bool(SETTING_SECTION_ENABLED)
         if SectionManager().section_count == 0:
             SectionManager().add_section()
@@ -168,13 +170,14 @@ class SectionToolWindow(ui.Window):
         self._on_section_visibility_changed()
 
     def _on_section_visibility_changed(self):
-        """manipulator 표시 설정을 SectionTool(scene)에 반영한다."""
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self._manipulator_visible = self._settings.get_as_bool(SETTING_SECTION_MANIPULATOR)
         SectionTool().set_visibility(self._manipulator_visible, self._ext_id)
 
     def _build_ui(self):
-        """Section Tool 창의 패널 UI를 구성한다."""
+        """UI 위젯 트리를 구성한다."""
         def generate():
+            """UI 위젯 트리를 구성한다."""
             with ui.VStack(spacing=10):
                 with ui.HStack(height=0):
                     ui.Spacer()
@@ -192,25 +195,25 @@ class SectionToolWindow(ui.Window):
         self._on_section_enabled()
 
     def _on_stage_closing(self, _):
-        """Stage 닫힘 시 섹션 기능을 중지하고 구독을 정리한다."""
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self.visible = False
         self.enable_section(False)
         self._stop_dirty_listen()
 
     def _on_stage_opened(self, _):
-        """Stage 열림 시 매니저/툴 상태를 초기화한다."""
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         SectionTool().set_visibility(False, self._ext_id)
         SectionManager().refresh()
         SectionTool().reset()
         self._start_dirty_listen()
 
     def _update_section_cut_direction(self):
-        """cutDirection 설정을 SectionManager 방향 값으로 반영한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         section_direction_top = bool(self._settings.get(SETTING_SECTION_DIRECTION) == DEFAULT_SECTION_TOP)
         SectionManager().set_direction(section_direction_top)
 
     def _start_dirty_listen(self):
-        """설정 변경 구독을 시작한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         self._stop_dirty_listen()
 
         self._cut_direction_setting_tp = omni.kit.app.SettingChangeSubscription(
@@ -224,20 +227,20 @@ class SectionToolWindow(ui.Window):
         )
 
     def _stop_dirty_listen(self):
-        """설정 변경 구독을 중지한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         self._update_setting_tp = None
         self._cut_direction_setting_tp = None
         self._manipulator_visibility_setting_tp = None
 
     def _on_show_gizmo(self):
-        """gizmo 표시를 위해 transform 모드 전환 후 비동기 표시를 요청한다."""
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self._settings.set(TRANSFORM_OP_SETTING, "move")
         # OM-33610: when user select widget, make sure widget is displayed
         self.enable_section(True)
         asyncio.ensure_future(self.wait_section_widget())
 
     async def wait_section_widget(self):
-        """프레임 갱신 이후 gizmo를 안정적으로 표시한다."""
+        """해당 함수의 핵심 로직을 수행한다."""
         for i in range(3):
             await omni.kit.app.get_app().next_update_async()
 

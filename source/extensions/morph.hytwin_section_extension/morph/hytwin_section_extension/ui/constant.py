@@ -14,6 +14,7 @@ ICON_SIZE = 40
 
 
 class Colors:
+    """이 모듈의 주요 기능을 구성하는 클래스다."""
     ButtonBackground = ui.color.shade(0xFF23211F, light=LightColors.Button)
     ButtonPressed = ui.color.shade(0xFF787569, light=0xFFA8A8A8)
 

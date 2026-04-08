@@ -18,47 +18,57 @@ from .section_scene import SectionScene
 
 @Singleton
 class SectionTool:
+    """뷰포트 기반 섹션 도구의 생명주기를 관리한다."""
     def __init__(self):
+        """인스턴스의 초기 상태를 구성한다."""
         self._scenes = {}
         self._ext_id = None
         self._visible = False
         self._post_update_sub = None
 
     def __del__(self):  # pragma: no cover
+        """사용한 구독과 리소스를 정리한다."""
         self.destroy()
 
     def destroy(self):
+        """사용한 구독과 리소스를 정리한다."""
         self._stop_viewport_watch()
         for scene in self._scenes.values():
             scene.destroy()
         self._scenes.clear()
 
     def reset(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         for scene in self._scenes.values():
             scene.refresh()
 
     @property
     def visible(self):  # pragma: no cover
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         return bool(self._scenes)
 
     @property
     def scene(self):
         # Backward-compatible accessor used by legacy call sites.
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         for scene in self._scenes.values():
             return scene
         return None
 
     @property
     def scenes(self):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         return list(self._scenes.values())
 
     def _get_viewport_key(self, viewport_window):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         if viewport_window is None:
             return None
         # Do not depend on viewport name/title: names may change by locale/user.
         return f"id:{id(viewport_window)}"
 
     def _get_visible_viewport_windows(self):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         windows = []
 
         # Utility API names differ by Kit version, so probe defensively.
@@ -107,6 +117,7 @@ class SectionTool:
         return filtered
 
     def _sync_viewport_scenes(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         if not self._ext_id:
             return
 
@@ -129,12 +140,14 @@ class SectionTool:
             carb.log_info(f"[SectionTool] Section scene removed for viewport: {key}")
 
     def _start_viewport_watch(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         if self._post_update_sub is not None:
             return
         stream = omni.kit.app.get_app().get_update_event_stream()
         self._post_update_sub = stream.create_subscription_to_pop(self._on_post_update, name="hytwin_section_vp_sync")
 
     def _stop_viewport_watch(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         try:
             if self._post_update_sub:
                 self._post_update_sub.unsubscribe()
@@ -143,10 +156,12 @@ class SectionTool:
         self._post_update_sub = None
 
     def _on_post_update(self, _):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         if self._visible:
             self._sync_viewport_scenes()
 
     def set_visibility(self, value: bool, ext_id: str) -> None:
+        """입력값을 내부 상태와 설정에 반영한다."""
         self._visible = bool(value)
         self._ext_id = ext_id
         if value:
@@ -160,5 +175,6 @@ class SectionTool:
         self.show_section_gizmo(value)
 
     def show_section_gizmo(self, value: bool):
+        """표시 상태를 변경하고 연관 상태를 동기화한다."""
         for scene in self._scenes.values():
             scene.show_section_gizmo(value)

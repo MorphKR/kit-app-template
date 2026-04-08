@@ -41,25 +41,31 @@ ARROW_VI = [i for i in range(sum(ARROW_VC))]
 
 # TODO: Suspect unused code; remove if so
 def flatten(transform):  # pragma: no cover
-    """2李⑥썝 諛곗뿴??1李⑥썝 諛곗뿴濡??됲깂?뷀븳??"""
+    """2차원 배열을 1차원 배열로 평탄화한다."""
     return [item for sublist in transform for item in sublist]
 
 
 def change_color(sender, changed):  # pragma: no cover
+    """증감값에 따라 색상 채널을 조정한다."""
     sender.color = [channel + changed for channel in sender.color]
 
 
 class SectionManipulator(sc.Manipulator):
     # TODO: Suspect unused code; remove if so
+    """이 모듈의 주요 기능을 구성하는 클래스다."""
     class ArcRotateTransform(sc.DragGesture):  # pragma: no cover
+        """이 모듈의 주요 기능을 구성하는 클래스다."""
         def __init__(self):
+            """인스턴스의 초기 상태를 구성한다."""
             super().__init__()
             self._begin_angle = 0
 
         def on_began(self):
+            """이벤트가 발생했을 때 후속 처리를 수행한다."""
             self._begin_angle = self.sender.gesture_payload.angle
 
         def on_changed(self):
+            """이벤트가 발생했을 때 후속 처리를 수행한다."""
             angle = self.sender.gesture_payload.angle - self._begin_angle
             axis = self.sender.axis
             if axis == 0:
@@ -73,6 +79,7 @@ class SectionManipulator(sc.Manipulator):
             SectionManager().rotate_widget(align, degree)
 
     def __init__(self, **kwargs):
+        """인스턴스의 초기 상태를 구성한다."""
         super().__init__(**kwargs)
 
         self._handle_offset = SECTION_HEIGHT + SECTION_WIDTH * 0.5
@@ -91,16 +98,18 @@ class SectionManipulator(sc.Manipulator):
         self.__in_hover = False
 
     def destroy(self):
+        """사용한 구독과 리소스를 정리한다."""
         self.__selection_state.destroy()
         self.__selection_state = None
 
     def show(self, visible: bool):
+        """표시 상태를 변경하고 연관 상태를 동기화한다."""
         if not visible and self.__in_hover:
             # OMPE-1444: When hidden, must clear selection state, otherwise viewport context menu may not work
             self._on_hover_end(None)
 
     def on_build(self):
-        """紐⑤뜽??蹂寃쎈맆 ???뱀뀡 ?됰㈃ ?꾪삎???ㅼ떆 援ъ꽦?쒕떎."""
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         if not self.model:  # pragma: no cover
             return
 
@@ -135,14 +144,17 @@ class SectionManipulator(sc.Manipulator):
         self._update_transforms()
 
     def _update_transforms(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         transform = self._get_model_transform()
         if self._section:
             self._section.transform = transform
 
     def on_model_updated(self, item):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self._update_transforms()
 
     def _get_model_transform(self):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         transform = self.model.get_as_floats(self.model.get_item("transform"))
         if transform is None:  # pragma: no cover
             scTransform = sc.Matrix44.get_translation_matrix(0, 0, 0)
@@ -169,9 +181,11 @@ class SectionManipulator(sc.Manipulator):
         return scTransform
 
     def _on_click_section(self, shape: sc.AbstractShape):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         asyncio.ensure_future(self.delay_show())
 
     def _on_hover_start(self, _sender):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self.__in_hover = True
         if self.__selection_state:
             self.__selection_state.reserve()
@@ -179,18 +193,21 @@ class SectionManipulator(sc.Manipulator):
         get_main_window_cursor().override_cursor_shape(CursorStandardShape.HAND)
 
     def _on_hover_end(self, _sender):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         if self.__selection_state:
             self.__selection_state.restore()
         get_main_window_cursor().clear_overridden_cursor_shape()
         self.__in_hover = False
 
     async def delay_show(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         for i in range(10):
             await omni.kit.app.get_app().next_update_async()
 
         self.show_gizmo(True)
 
     def show_gizmo(self, value):
+        """표시 상태를 변경하고 연관 상태를 동기화한다."""
         widget_prim = SectionManager().get_section_widget_prim(viewport_key=self._viewport_key)
         if value and widget_prim:
             widget_prim_path = widget_prim.GetPath().pathString

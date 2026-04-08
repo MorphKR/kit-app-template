@@ -32,7 +32,9 @@ ICON_OFFSET = 100
 
 class SectionScene:
 
+    """뷰포트에서 SceneView, 모델, 매니퓰레이터 연결을 관리한다."""
     def __init__(self, ext_id: str, viewport_window=None, viewport_key: str = None, **kwargs):
+        """인스턴스의 초기 상태를 구성한다."""
         self._ext_id = ext_id
         self._settings = carb.settings.get_settings()
         self._section_model = None
@@ -51,13 +53,16 @@ class SectionScene:
 
     @property
     def viewport_api(self):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         return self._viewport_window.viewport_api if self._viewport_window else None
 
     @property
     def viewport_window(self):
+        """현재 상태에서 필요한 값을 조회해 반환한다."""
         return self._viewport_window
 
     def destroy(self):
+        """사용한 구독과 리소스를 정리한다."""
         if self._manipulator:
             self._manipulator.destroy()
             self._manipulator = None
@@ -78,7 +83,7 @@ class SectionScene:
         self._viewport_window = None
 
     def __build_window(self):
-        """Viewport frame에 SceneView와 SectionManipulator를 구성한다."""
+        """UI 위젯 트리를 구성한다."""
         if not self._viewport_window:
             return
         self.frame = self._viewport_window.get_frame(self._ext_id)
@@ -92,6 +97,7 @@ class SectionScene:
             self._viewport_window.viewport_api.add_scene_view(self._scene_view)
 
     def show(self, visible: bool):
+        """표시 상태를 변경하고 연관 상태를 동기화한다."""
         if not hasattr(self, "frame") or not self.frame:
             return
         self.frame.visible = visible
@@ -99,13 +105,17 @@ class SectionScene:
             self._manipulator.show(visible)
 
     def show_section_gizmo(self, value):
+        """표시 상태를 변경하고 연관 상태를 동기화한다."""
         if self._manipulator:
             self._manipulator.show_gizmo(value)
 
     def refresh(self):
+        """현재 상태를 다시 계산하고 갱신한다."""
         if self._section_model:
             self._section_model.refresh()
 
     def _on_section_direction_changed(self):
+        """이벤트가 발생했을 때 후속 처리를 수행한다."""
         if self._section_model:
             self._section_model.update_section_plane()
+

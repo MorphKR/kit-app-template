@@ -16,7 +16,9 @@ from omni.ui.tests.test_base import OmniUiTest
 
 class TestSection(OmniUiTest):
     # Before running each test
+    """확장 기능 동작을 검증하는 테스트 클래스다."""
     async def setUp(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         await super().setUp()
 
         self._section = get_section_instance()
@@ -47,6 +49,7 @@ class TestSection(OmniUiTest):
     # After running each test
     async def tearDown(self):
         # Close section window
+        """사용한 구독과 리소스를 정리한다."""
         ui.Workspace.show_window(WINDOW_NAME, False)
         await ui_test.human_delay(2)
 
@@ -54,6 +57,7 @@ class TestSection(OmniUiTest):
         await super().tearDown()
 
     def ndc_to_mouse_coord(self, ndc_coord) -> Vec2:
+        """해당 함수의 핵심 로직을 수행한다."""
         from omni.kit.viewport.utility import get_active_viewport_window
 
         window = get_active_viewport_window()
@@ -67,6 +71,7 @@ class TestSection(OmniUiTest):
         return Vec2(mouse_x, mouse_y)
 
     def create_test_object(self, prim_path, prim_type="Cube", position=(0, 0, 0)):
+        """해당 함수의 핵심 로직을 수행한다."""
         kwargs = {"prim_type": prim_type, "prim_path": prim_path, "attributes": {"size": 100.0}}
 
         cmd.execute("CreatePrimWithDefaultXform", **kwargs)
@@ -75,6 +80,7 @@ class TestSection(OmniUiTest):
         prim.GetAttribute("xformOp:translate").Set(position)
 
     async def test_general(self):
+        """해당 기능 경로를 검증하는 테스트 시나리오다."""
         from morph.hytwin_section_extension.common import SectionManager
 
         """Testing general look of section"""
@@ -129,6 +135,7 @@ class TestSection(OmniUiTest):
         self.assertTrue(prim_midpoint == [0, 0, 0])
 
     async def test_hide_when_window_close(self):
+        """해당 기능 경로를 검증하는 테스트 시나리오다."""
         await ui_test.human_delay(2)
         await self.finalize_test("section_1.png")
 
@@ -162,6 +169,7 @@ class TestSection(OmniUiTest):
             settings.set(SETTING_SECTION_ALWAYS_DISPLAY, False)
 
     async def test_tool_change(self):
+        """해당 기능 경로를 검증하는 테스트 시나리오다."""
         settings = carb.settings.get_settings()
 
         window = ui.Workspace.get_window(WINDOW_NAME)
@@ -178,6 +186,7 @@ class TestSection(OmniUiTest):
         await self.finalize_test("section_tool_change.png")
 
     async def test_quick_move_panel(self):
+        """해당 기능 경로를 검증하는 테스트 시나리오다."""
         x_button = ui_test.find(f"{WINDOW_NAME}//Frame/**/Button[*].text=='X'")
         await x_button.click()
 
@@ -211,6 +220,7 @@ class TestSection(OmniUiTest):
         await self.finalize_test("section_quick_move_panel.png")
 
     async def test_always_display_switch(self):
+        """해당 기능 경로를 검증하는 테스트 시나리오다."""
         switch = ui_test.find(f"{WINDOW_NAME}//Frame/**/ImageWithProvider[*].identifier=='switch'")
         await ui_test.human_delay(2)
 
@@ -223,6 +233,7 @@ class TestSection(OmniUiTest):
         await self.finalize_test("section_always_display_switch.png")
 
     async def test_dock(self):
+        """해당 기능 경로를 검증하는 테스트 시나리오다."""
         window = ui.Workspace.get_window(WINDOW_NAME)
 
         self.assertTrue(window.is_visible())
@@ -232,6 +243,7 @@ class TestSection(OmniUiTest):
         self.assertTrue(docked)
 
     async def test_section_manager(self):
+        """해당 기능 경로를 검증하는 테스트 시나리오다."""
         from morph.hytwin_section_extension.common import SectionManager
 
         manager = SectionManager()
@@ -239,7 +251,7 @@ class TestSection(OmniUiTest):
         self.assertTrue(len(manager.section_names) == 1)
 
     async def test_current_tool(self):
-        """OMFP-3552: Opening Section tool disables navigation tools"""
+        """해당 기능 경로를 검증하는 테스트 시나리오다."""
         settings = carb.settings.get_settings()
         NAVIGATION_TOOL = "navigation"
         SECTION_TOOL = WINDOW_NAME
@@ -267,11 +279,14 @@ class TestSection(OmniUiTest):
         self.assertEqual(settings.get_as_string(CURRENT_TOOL_PATH), other_tool_name)
 
     async def finalize_test(self, golden_img_name):
+        """해당 함수의 핵심 로직을 수행한다."""
         return await super().finalize_test(golden_img_dir=self._golden_img_dir, golden_img_name=golden_img_name)
 
 
 class TestSectionExtension(OmniUiTest):
+    """확장 기능 동작을 검증하는 테스트 클래스다."""
     async def setUp(self):
+        """해당 함수의 핵심 로직을 수행한다."""
         await super().setUp()
 
         # Create temp stage
@@ -280,12 +295,14 @@ class TestSectionExtension(OmniUiTest):
         await ui_test.wait_n_updates(3)
 
     async def tearDown(self):
+        """사용한 구독과 리소스를 정리한다."""
         await super().tearDown()
 
         await self._ctx.close_stage_async()
         await super().tearDown()
 
     async def test_extension(self):
+        """해당 기능 경로를 검증하는 테스트 시나리오다."""
         manager = omni.kit.app.get_app().get_extension_manager()
         ext_id = "morph.hytwin_section_extension"
         self.assertTrue(manager.is_extension_enabled(ext_id))

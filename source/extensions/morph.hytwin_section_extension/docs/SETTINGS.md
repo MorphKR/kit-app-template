@@ -2,52 +2,53 @@
 **Extension**: {{ extension_version }},**Documentation Generated**: {sub-ref}`today`
 ```
 
-# Settings
+# 설정
 
-## Settings Provided by the Extension
+## 확장에서 제공하는 설정
+
 ### exts."morph.hytwin_section_extension".menuPath
-   - **Default Value**: Tools/Section
-   - **Description**: Specifies the menu path where the Section Tool window is inserted within the UI.
+- **기본값**: `Tools/Section`
+- **설명**: Section Tool 창이 등록될 메뉴 경로를 지정합니다.
 
 ### exts."morph.hytwin_section_extension".useSessionLayer
-   - **Default Value**: True
-   - **Description**: Determines whether section editing operations use the session layer of the USD stage.
+- **기본값**: `True`
+- **설명**: 섹션 편집 내용을 USD Session Layer에 기록할지 여부를 설정합니다.
 
 ### exts."morph.hytwin_section_extension".alwaysDisplay
-   - **Default Value**: False
-   - **Description**: Controls whether the Section Tool window is always displayed irrespective of automatic UI visibility behaviors.
+- **기본값**: `False`
+- **설명**: UI 창 표시 상태와 무관하게 섹션을 항상 표시할지 제어합니다.
 
-## Settings Used by the Extension but Provided by Another Extension
+## 확장에서 사용하며 다른 확장이 제공하는 설정
+
 ### CURRENT_TOOL_PATH
-   - **Description**: Specifies the path of the currently active tool, enabling the extension to check and switch tool modes when window visibility changes.
+- **설명**: 현재 활성 도구 경로를 읽어 창 표시/숨김 또는 도구 전환 제어에 사용합니다.
 
 ### SETTING_SECTION_ENABLED
-   - **Description**: Determines if the section tool is activated on stage, allowing the extension to disable section operations when a stage is opened.
+- **설명**: RTX 섹션 기능 활성화 여부를 나타냅니다.
 
 ### SETTING_SECTION_LIGHT
-   - **Description**: Indicates whether section lighting is enabled, affecting how the section is rendered visually in the viewport.
+- **설명**: 섹션 조명 사용 여부를 제어합니다.
 
 ### SETTING_SECTION_DIRECTION
-   - **Description**: Specifies the default cutting direction for sections, thereby controlling the orientation for the section plane.
+- **설명**: 절단 방향(Top/Bottom) 값을 지정합니다.
 
 ### SETTING_SECTION_PLANE
-   - **Description**: Defines the section plane via a float array representing its equation; this value is updated in response to tool transform changes.
+- **설명**: 섹션 평면 방정식 값(nx, ny, nz, d)을 저장하는 경로입니다.
 
 ### SETTING_SECTION_MANIPULATOR
-   - **Description**: Controls the visibility of the section manipulator widget, allowing users to interactively adjust the section settings.
+- **설명**: 섹션 조작기(Manipulator) 표시 여부를 제어합니다.
 
 ### SETTING_RTX_DEFAULT_SECTION_DIRECTION
-   - **Description**: Provides the fallback section cutting direction used in RTX workflows, ensuring consistency when no user setting is specified.
+- **설명**: RTX 기본 절단 방향 설정값입니다.
 
 ### SETTING_RTX_DEFAULT_SECTION_MANIPULATOR
-   - **Description**: Specifies the default state of the section manipulator in RTX mode, serving as a baseline configuration for the UI control.
+- **설명**: RTX 기본 조작기 표시 설정값입니다.
 
 ### /exts/omni.kit.window.viewport/showContextMenu
-   - **Description**: Manages the visibility of the viewport context menu based on persistent application settings provided by another extension.
+- **설명**: 뷰포트 컨텍스트 메뉴 표시 상태를 제어합니다.
 
 ### /app/transform/operation
-   - **Description**: Controls the current transform operation mode (e.g., "move"), which determines how transformation commands are applied within the application.
+- **설명**: 현재 변환 모드(예: `move`)를 나타냅니다.
 
 ### SETTING_SECTION_ALWAYS_DISPLAY
-   - **Description**: Determines whether the section tool window remains visible at all times, overriding normal UI show/hide behavior.
-
+- **설명**: 섹션 UI의 상시 표시 동작과 연동되는 설정입니다.
