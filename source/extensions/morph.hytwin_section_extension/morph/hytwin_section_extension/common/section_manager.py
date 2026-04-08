@@ -17,7 +17,6 @@ import omni.usd
 from omni.kit.viewport.utility import get_active_viewport_camera_path
 from omni.kit.viewport.utility.camera_state import ViewportCameraState
 from pxr import Gf, Sdf, Usd, UsdGeom
-from ..extension import get_instance
 
 from .constant import (
     DEFAULT_SECTION_TOP,
@@ -25,6 +24,7 @@ from .constant import (
     SETTING_SECTION_DIRECTION,
     SETTING_SECTION_ENABLED,
     SETTING_SECTION_LIGHT,
+    SETTING_SECTION_MANIPULATOR,
     SETTING_SECTION_USE_SESSION_LAYER,
 )
 from .utils import Singleton
@@ -107,14 +107,67 @@ class SectionManager:
             return
         self._settings.set_bool(SETTING_SECTION_ENABLED, bool(enabled))
 
-        inst = get_instance()
-        if inst:
-            inst.show_window(None, enabled)
-
     def is_section_enabled(self) -> bool:
         if not self._settings:
             return False
         return self._settings.get_as_bool(SETTING_SECTION_ENABLED)
+
+    def _resolve_ext_id(self) -> str:
+        # Prefer runtime extension id from singleton, fallback to known extension name.
+        try:
+            from .. import get_instance
+
+            inst = get_instance()
+            if inst and getattr(inst, "_ext_id", None):
+                return inst._ext_id
+        except Exception:
+            pass
+        return "morph.hytwin_section_extension"
+
+    def run_section_runtime(self, ext_id: str = None, show_gizmo: bool = True) -> bool:
+        """
+        Runs section feature logic without relying on UI window visibility callbacks.
+        - Enable section settings
+        - Ensure at least one section object exists
+        - Show section manipulator/scene
+        """
+        ext_id = (ext_id or "").strip() or self._resolve_ext_id()
+
+        self.set_section_enabled(True)
+        self._settings.set_bool(SETTING_SECTION_MANIPULATOR, True)
+
+        if self.section_count == 0:
+            self.add_section()
+
+        from ..tool import SectionTool
+
+        SectionTool().set_visibility(True, ext_id)
+        if show_gizmo:
+            SectionTool().show_section_gizmo(True)
+        return True
+
+    def run_section_only(self, ext_id: str = None) -> bool:
+        """
+        Runs section feature only (without opening section tool UI window).
+        This function enables section and creates section data/scene if needed.
+        """
+        return self.run_section_runtime(ext_id=ext_id, show_gizmo=False)
+
+    def stop_section_only(self, ext_id: str = None) -> bool:
+        """
+        Stops section feature only (without touching section tool UI window).
+        This function disables section and hides section scene/manipulator.
+        """
+        ext_id = (ext_id or "").strip() or self._resolve_ext_id()
+
+        self._settings.set_bool(SETTING_SECTION_MANIPULATOR, False)
+        self.set_section_enabled(False)
+
+        from ..tool import SectionTool
+
+        SectionTool().show_section_gizmo(False)
+        SectionTool().set_visibility(False, ext_id)
+        return True
 
     def add_section(self):
         with self._get_section_edit_context():

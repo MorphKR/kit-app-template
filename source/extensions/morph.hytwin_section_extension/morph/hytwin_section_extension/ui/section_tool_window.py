@@ -134,8 +134,8 @@ class SectionToolWindow(ui.Window):
         # OMFP-2189: "Always Display"媛 爰쇱쭊 ?곹깭?먯꽌 李쎌씠 ?ロ옄 ?뚮쭔 ?뱀뀡???④릿??
         if visible:
             self.frame.rebuild()
-            self.enable_section(True)
-            self._on_show_gizmo()
+            # UI 활성화 시 section 실행은 SectionManager 런타임 함수로 위임한다.
+            SectionManager().run_section_runtime(ext_id=self._ext_id, show_gizmo=True)
         else:
             if not self._always_display_model.as_bool:
                 self.enable_section(False)
