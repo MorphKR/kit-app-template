@@ -17,11 +17,13 @@ import omni.usd
 from omni.kit.viewport.utility import get_active_viewport_camera_path
 from omni.kit.viewport.utility.camera_state import ViewportCameraState
 from pxr import Gf, Sdf, Usd, UsdGeom
+from ..extension import get_instance
 
 from .constant import (
     DEFAULT_SECTION_TOP,
     HIDE_IN_STAGE_WINDOW,
     SETTING_SECTION_DIRECTION,
+    SETTING_SECTION_ENABLED,
     SETTING_SECTION_LIGHT,
     SETTING_SECTION_USE_SESSION_LAYER,
 )
@@ -100,17 +102,31 @@ class SectionManager:
     def set_added_section_callback(self, cb: callable):
         self._on_added_section_fn = cb
 
+    def set_section_enabled(self, enabled: bool) -> None:
+        if not self._settings:
+            return
+        self._settings.set_bool(SETTING_SECTION_ENABLED, bool(enabled))
+
+        inst = get_instance()
+        if inst:
+            inst.show_window(None, enabled)
+
+    def is_section_enabled(self) -> bool:
+        if not self._settings:
+            return False
+        return self._settings.get_as_bool(SETTING_SECTION_ENABLED)
+
     def add_section(self):
         with self._get_section_edit_context():
-            # ?꾩옱 ?꾩젽 ?곹깭瑜??쎌뼱 ?좉퇋 ?뱀뀡 ?곗씠?곕? 留뚮뱺??
+
             section = self._get_section_from_widget(is_new=True)
             if section is None:  # pragma: no cover
                 carb.log_error("[SectionTool] Failed to get section info!")
                 return None
 
-            # ?좉퇋 ?뱀뀡? ?댁쟾 ?뱀뀡 蹂듭궗蹂몄씠 ?꾨땲???낅┰ ?뱀뀡?쇰줈 ?앹꽦?쒕떎.
+
             self._add_section_internal(section)
-            # ?⑤꼸 UI???좉퇋 ?뱀뀡 異붽?瑜??뚮┛??
+
             if self._on_added_section_fn:
                 self._on_added_section_fn(section["name"])
 
@@ -260,12 +276,12 @@ class SectionManager:
             name = section["name"]
             self._section_variants[name] = section
 
-            # 酉고룷???꾩젽 prim??variant set???뱀뀡??異붽??쒕떎.
+
             carb.log_info(f"[SectionTool] Section variant {name} added, need to save manually")
 
-            variant_set.AddVariant(name)  # variant set????ぉ 異붽?
-            variant_set.SetVariantSelection(name)  # 諛⑷툑 留뚮뱺 ?뱀뀡 variant ?좏깮
-            with variant_set.GetVariantEditContext():  # ??variant ?몄쭛 而⑦뀓?ㅽ듃 吏꾩엯
+            variant_set.AddVariant(name)
+            variant_set.SetVariantSelection(name)
+            with variant_set.GetVariantEditContext():
                 self.set_direction(section["direction"])
                 self._set_light(section["light"])
                 self._section_transform_attr.Set(section["transform"])
@@ -315,7 +331,7 @@ class SectionManager:
         return self._get_section_attribute(ATTR_SECTION_DIRECTION, DEFAULT_SECTION_TOP)
 
     def _create_section_spawn_point(self) -> Gf.Vec3d:
-        # 移대찓???꾩튂/?源?湲곗? ?꾨갑 踰≫꽣 諛⑺뼢?쇰줈 ?쇱젙 嫄곕━ ?⑥뼱吏?吏?먯쓣 ?앹꽦 ?꾩튂濡??ъ슜?쒕떎.
+
         camera_path = get_active_viewport_camera_path()
         camera_state = ViewportCameraState(camera_path)
 
@@ -360,7 +376,7 @@ class SectionManager:
             if vset is None:
                 return
 
-            # Section_NNN ?ㅼ씠諛?洹쒖튃???댁슜???ㅼ쓬 ?ъ슜 媛?ν븳 踰덊샇瑜?怨꾩궛?쒕떎.
+
             for name in vset.GetVariantNames():
                 carb.log_info(f"[SectionTool] Found variant {name}")
                 self._section_variants[name] = None
@@ -381,7 +397,7 @@ class SectionManager:
             if vset is None:  # pragma: no cover
                 return None
 
-            # ?꾩옱 ?꾩젽 ?곹깭瑜??쎌뼱 variant ?곗씠?곕줈 ??ν븳??
+
             section = self._get_section_from_widget(name)
 
             carb.log_info(f"[SectionTool] Save section to variant {name}")
@@ -438,7 +454,8 @@ class SectionManager:
                         else:  # pragma: no cover
                             return None
 
-            return self._section_variant_set    def _sanitize_viewport_key(self, viewport_key: str) -> str:
+            return self._section_variant_set
+    def _sanitize_viewport_key(self, viewport_key: str) -> str:
         safe = re.sub(r"[^a-zA-Z0-9_]", "_", str(viewport_key or "default"))
         return safe.strip("_") or "default"
 
@@ -500,8 +517,7 @@ class SectionManager:
             return SECTION_TOOL_PATH
 
     def _get_section_edit_context(self):
-        # useSessionLayer ?ㅼ젙???곕씪 紐⑤뱺 ?뱀뀡 ?몄쭛??session/root ?덉씠?댁뿉 湲곕줉??
-        # ?먮낯 stage authored ?곗씠???ㅼ뿼??諛⑹??쒕떎.
+
         stage = omni.usd.get_context().get_stage()
         sect_layer = self._get_section_layer()
         return Usd.EditContext(stage, sect_layer)
@@ -521,11 +537,7 @@ class SectionManager:
             if isinstance(prim_paths, list) and len(prim_paths) > 0:
                 for path in prim_paths:
                     prim = self._stage.GetPrimAtPath(path)
-                    # ?쇰? ?먯궛?먯꽌??location 湲곕컲 怨꾩궛??遺?뺥솗?????덉뼱
-                    # ?붾뱶 諛붿슫??諛뺤뒪濡?以묒떖?먯쓣 怨꾩궛?쒕떎.
-                    # xform = UsdGeom.Xformable(prim)
-                    # matrix = xform.GetLocalTransformation()
-                    # location = matrix.ExtractTranslation()
+
                     bound = self._bboxcache.ComputeWorldBound(prim).ComputeAlignedRange()
                     if bound.IsEmpty():
                         for child in Usd.PrimRange(prim):
@@ -534,4 +546,3 @@ class SectionManager:
                                 bound.UnionWith(sub_bound)
                     all_bound.UnionWith(bound)
             return all_bound.GetMidpoint()
-
