@@ -17,6 +17,7 @@ from omni.kit.widget.viewport import ViewportWidget
 from pxr import Gf, UsdGeom
 
 from .click_sync import QuadViewportClickSync
+from .viewport_bridge import register_viewport_host, unregister_viewport_host
 
 
 class MyExtension(omni.ext.IExt):
@@ -30,6 +31,7 @@ class MyExtension(omni.ext.IExt):
         )
         self._window = None
         self._viewports = []
+        self._viewport_host_keys = []
         self._ui_init_task = None
         self._click_sync = QuadViewportClickSync()
         self._camera_specs = (
@@ -95,14 +97,14 @@ class MyExtension(omni.ext.IExt):
         with self._window.frame:
             with ui.VStack(spacing=0, height=ui.Fraction(1.0)):
                 with ui.HStack(spacing=0, height=ui.Fraction(1.0)):
-                    self._create_interactive_viewport(self._camera_specs[0][0])
+                    self._create_interactive_viewport(self._camera_specs[0][0], "quad_0")
                     ui.Rectangle(width=divider_size, style={"background_color": divider_color})
-                    self._create_interactive_viewport(self._camera_specs[1][0])
+                    self._create_interactive_viewport(self._camera_specs[1][0], "quad_1")
                 ui.Rectangle(height=divider_size, style={"background_color": divider_color})
                 with ui.HStack(spacing=0, height=ui.Fraction(1.0)):
-                    self._create_interactive_viewport(self._camera_specs[2][0])
+                    self._create_interactive_viewport(self._camera_specs[2][0], "quad_2")
                     ui.Rectangle(width=divider_size, style={"background_color": divider_color})
-                    self._create_interactive_viewport(self._camera_specs[3][0])
+                    self._create_interactive_viewport(self._camera_specs[3][0], "quad_3")
         # Docking is deferred to _dock_to_main_viewport_async for startup safety.
 
     async def _dock_to_main_viewport_async(self):
@@ -124,8 +126,8 @@ class MyExtension(omni.ext.IExt):
         for viewport, (camera_path, _, _) in zip(self._viewports, self._camera_specs):
             viewport.viewport_api.camera_path = camera_path
 
-    def _create_interactive_viewport(self, camera_path: str):
-        click_target = ui.ZStack(width=ui.Fraction(1.0), height=ui.Fraction(1.0))
+    def _create_interactive_viewport(self, camera_path: str, host_key: str):
+        click_target = ui.ZStack(width=ui.Fraction(1.0), height=ui.Fraction(1.0), skip_draw_when_clipped=True)
         with click_target:
             viewport = ViewportWidget(
                 resolution="fill_frame",
@@ -133,6 +135,21 @@ class MyExtension(omni.ext.IExt):
                 width=ui.Fraction(1.0),
                 height=ui.Fraction(1.0),
             )
+            # Frame used by scene-based tools (e.g. section tool) to attach overlay widgets.
+            section_overlay_frame = ui.ScrollingFrame(
+                width=ui.Fraction(1.0),
+                height=ui.Fraction(1.0),
+                horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
+                vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
+                skip_draw_when_clipped=True,
+                style={"ScrollingFrame": {"background_color": 0x00000000}},
+            )
+            # Best-effort clipping hints for different ui builds.
+            for attr_name in ("content_clipping", "clip_children", "clip_to_bounds"):
+                try:
+                    setattr(section_overlay_frame, attr_name, True)
+                except Exception:
+                    pass
             # Very low alpha keeps hit-testing active while remaining visually transparent.
             hit_rect = ui.Rectangle(
                 width=ui.Fraction(1.0),
@@ -143,6 +160,8 @@ class MyExtension(omni.ext.IExt):
         # Register click on the concrete overlay rect rather than container.
         # This keeps callback x/y in per-quadrant local coordinates more reliably.
         self._click_sync.register_viewport(viewport, hit_rect)
+        register_viewport_host(host_key, viewport.viewport_api, section_overlay_frame)
+        self._viewport_host_keys.append(host_key)
         self._viewports.append(viewport)
 
     def on_shutdown(self):
@@ -159,6 +178,9 @@ class MyExtension(omni.ext.IExt):
         for viewport in self._viewports:
             viewport.destroy()
         self._viewports = []
+        for host_key in self._viewport_host_keys:
+            unregister_viewport_host(host_key)
+        self._viewport_host_keys = []
 
         if self._window:
             self._window = None

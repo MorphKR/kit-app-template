@@ -27,30 +27,25 @@ class SectionTool:
         self._post_update_sub = None
 
     def __del__(self):  # pragma: no cover
-        """사용한 구독과 리소스를 정리한다."""
         self.destroy()
 
     def destroy(self):
-        """사용한 구독과 리소스를 정리한다."""
         self._stop_viewport_watch()
         for scene in self._scenes.values():
             scene.destroy()
         self._scenes.clear()
 
     def reset(self):
-        """해당 함수의 핵심 로직을 수행한다."""
         for scene in self._scenes.values():
             scene.refresh()
 
     @property
     def visible(self):  # pragma: no cover
-        """현재 상태에서 필요한 값을 조회해 반환한다."""
         return bool(self._scenes)
 
     @property
     def scene(self):
         # Backward-compatible accessor used by legacy call sites.
-        """현재 상태에서 필요한 값을 조회해 반환한다."""
         for scene in self._scenes.values():
             return scene
         return None
@@ -64,8 +59,23 @@ class SectionTool:
         """현재 상태에서 필요한 값을 조회해 반환한다."""
         if viewport_window is None:
             return None
+        host_key = getattr(viewport_window, "host_key", None)
+        if host_key:
+            return f"host:{host_key}"
         # Do not depend on viewport name/title: names may change by locale/user.
         return f"id:{id(viewport_window)}"
+
+    def _get_external_viewport_hosts(self):
+        hosts = []
+        try:
+            from morph.hytwin_viewportwidget_extension.viewport_bridge import get_registered_viewport_hosts
+
+            for host in get_registered_viewport_hosts() or []:
+                if host and hasattr(host, "viewport_api") and hasattr(host, "get_frame"):
+                    hosts.append(host)
+        except Exception:
+            pass
+        return hosts
 
     def _get_visible_viewport_windows(self):
         """현재 상태에서 필요한 값을 조회해 반환한다."""
@@ -96,6 +106,9 @@ class SectionTool:
             active = vp_utils.get_active_viewport_window()
             if active:
                 windows = [active]
+
+        # Add custom viewport hosts (e.g. ViewportWidget tiles).
+        windows.extend(self._get_external_viewport_hosts())
 
         # Unique by object id.
         unique = {}
@@ -140,14 +153,12 @@ class SectionTool:
             carb.log_info(f"[SectionTool] Section scene removed for viewport: {key}")
 
     def _start_viewport_watch(self):
-        """해당 함수의 핵심 로직을 수행한다."""
         if self._post_update_sub is not None:
             return
         stream = omni.kit.app.get_app().get_update_event_stream()
         self._post_update_sub = stream.create_subscription_to_pop(self._on_post_update, name="hytwin_section_vp_sync")
 
     def _stop_viewport_watch(self):
-        """해당 함수의 핵심 로직을 수행한다."""
         try:
             if self._post_update_sub:
                 self._post_update_sub.unsubscribe()

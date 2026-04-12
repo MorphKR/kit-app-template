@@ -11,12 +11,10 @@ __all__ = ["SelectionState"]
 
 from typing import Dict
 
-import omni.kit.viewport.utility as vu
 from carb.settings import get_settings
 from omni.kit.viewport.window import ViewportWindow
 
 CONTEXT_MENU_SETTINGS = "/exts/omni.kit.window.viewport/showContextMenu"
-
 
 
 class SelectionState:
@@ -25,10 +23,13 @@ class SelectionState:
         """인스턴스의 초기 상태를 구성한다."""
         self.__settings = get_settings()
         self.__layers_state: Dict = {}
-        self.__layers: Dict = {
-            "Selection": viewport_window._find_viewport_layer("Selection", category="manipulator"),
-            "ContextMenu": viewport_window._find_viewport_layer("ContextMenu", category="manipulator"),
-        }
+        if viewport_window and hasattr(viewport_window, "_find_viewport_layer"):
+            self.__layers: Dict = {
+                "Selection": viewport_window._find_viewport_layer("Selection", category="manipulator"),
+                "ContextMenu": viewport_window._find_viewport_layer("ContextMenu", category="manipulator"),
+            }
+        else:
+            self.__layers = {"Selection": None, "ContextMenu": None}
 
         ctx_menu_enabled = self.__settings.get(CONTEXT_MENU_SETTINGS)
         self.__ctx_menu_restore = ctx_menu_enabled if ctx_menu_enabled is not None else True
