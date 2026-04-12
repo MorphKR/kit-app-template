@@ -11,11 +11,12 @@
 import asyncio
 
 import omni.ext
-import omni.kit.app
 import omni.ui as ui
 import omni.usd
 from omni.kit.widget.viewport import ViewportWidget
 from pxr import Gf, UsdGeom
+
+from .click_sync import QuadViewportClickSync
 
 
 class MyExtension(omni.ext.IExt):
@@ -30,6 +31,7 @@ class MyExtension(omni.ext.IExt):
         self._window = None
         self._viewports = []
         self._ui_init_task = None
+        self._click_sync = QuadViewportClickSync()
         self._camera_specs = (
             ("/World/Cam_1", Gf.Vec3d(-500.0, 350.0, 500.0), Gf.Vec3d(-25.0, -45.0, 0.0)),
             ("/World/Cam_2", Gf.Vec3d(500.0, 350.0, 500.0), Gf.Vec3d(-25.0, 45.0, 0.0)),
@@ -53,7 +55,7 @@ class MyExtension(omni.ext.IExt):
     async def _deferred_init_ui(self):
         try:
             # Delay only the deferred UI init entrypoint by 5 second.
-            await asyncio.sleep(3.0)
+            await asyncio.sleep(5.0)
 
             self._ensure_stage_y_up()
             self._ensure_quad_cameras()
@@ -93,14 +95,14 @@ class MyExtension(omni.ext.IExt):
         with self._window.frame:
             with ui.VStack(spacing=0, height=ui.Fraction(1.0)):
                 with ui.HStack(spacing=0, height=ui.Fraction(1.0)):
-                    self._create_viewport(self._camera_specs[0][0])
+                    self._create_interactive_viewport(self._camera_specs[0][0])
                     ui.Rectangle(width=divider_size, style={"background_color": divider_color})
-                    self._create_viewport(self._camera_specs[1][0])
+                    self._create_interactive_viewport(self._camera_specs[1][0])
                 ui.Rectangle(height=divider_size, style={"background_color": divider_color})
                 with ui.HStack(spacing=0, height=ui.Fraction(1.0)):
-                    self._create_viewport(self._camera_specs[2][0])
+                    self._create_interactive_viewport(self._camera_specs[2][0])
                     ui.Rectangle(width=divider_size, style={"background_color": divider_color})
-                    self._create_viewport(self._camera_specs[3][0])
+                    self._create_interactive_viewport(self._camera_specs[3][0])
         # Docking is deferred to _dock_to_main_viewport_async for startup safety.
 
     async def _dock_to_main_viewport_async(self):
@@ -109,18 +111,12 @@ class MyExtension(omni.ext.IExt):
 
         # Preferred: let Kit dock when target window becomes active/ready.
         self._window.deferred_dock_in("Viewport", ui.DockPolicy.CURRENT_WINDOW_IS_ACTIVE)
-
         # Fallback: if Viewport is already available now, dock immediately.
-        for window_name in ("Viewport"):
+        for window_name in ("Viewport", "Viewport 1"):
             main_viewport_window = ui.Workspace.get_window(window_name)
             if main_viewport_window:
-                main_viewport_window.flags = (
-                    ui.WINDOW_FLAGS_NO_TITLE_BAR
-                    | ui.WINDOW_FLAGS_NO_COLLAPSE
-                    | ui.WINDOW_FLAGS_NO_MOVE
-                    | ui.WINDOW_FLAGS_NO_RESIZE
-                    | ui.WINDOW_FLAGS_NO_SCROLLBAR
-                )
+                main_viewport_window.dock_tab_bar_visible = False
+                main_viewport_window.dock_tab_bar_enabled = False
                 self._window.dock_in(main_viewport_window, ui.DockPosition.SAME, 1.0)
                 break
 
@@ -128,13 +124,25 @@ class MyExtension(omni.ext.IExt):
         for viewport, (camera_path, _, _) in zip(self._viewports, self._camera_specs):
             viewport.viewport_api.camera_path = camera_path
 
-    def _create_viewport(self, camera_path: str):
-        viewport = ViewportWidget(
-            resolution="fill_frame",
-            camera_path=camera_path,
-            width=ui.Fraction(1.0),
-            height=ui.Fraction(1.0),
-        )
+    def _create_interactive_viewport(self, camera_path: str):
+        click_target = ui.ZStack(width=ui.Fraction(1.0), height=ui.Fraction(1.0))
+        with click_target:
+            viewport = ViewportWidget(
+                resolution="fill_frame",
+                camera_path=camera_path,
+                width=ui.Fraction(1.0),
+                height=ui.Fraction(1.0),
+            )
+            # Very low alpha keeps hit-testing active while remaining visually transparent.
+            hit_rect = ui.Rectangle(
+                width=ui.Fraction(1.0),
+                height=ui.Fraction(1.0),
+                style={"background_color": ui.color(0.0, 0.0, 0.0, 0.001)},
+            )
+
+        # Register click on the concrete overlay rect rather than container.
+        # This keeps callback x/y in per-quadrant local coordinates more reliably.
+        self._click_sync.register_viewport(viewport, hit_rect)
         self._viewports.append(viewport)
 
     def on_shutdown(self):
@@ -144,6 +152,9 @@ class MyExtension(omni.ext.IExt):
         if self._ui_init_task:
             self._ui_init_task.cancel()
             self._ui_init_task = None
+        if self._click_sync:
+            self._click_sync.destroy()
+            self._click_sync = None
 
         for viewport in self._viewports:
             viewport.destroy()
