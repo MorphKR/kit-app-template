@@ -34,6 +34,12 @@ class MyExtension(omni.ext.IExt):
         self._viewport_host_keys = []
         self._ui_init_task = None
         self._click_sync = QuadViewportClickSync()
+        self._click_sync.set_double_click_handler(self._on_viewport_double_click)
+        self._click_sync.set_right_drag_handlers(
+            on_begin=self._on_viewport_right_drag_begin,
+            on_changed=self._on_viewport_right_drag_changed,
+            on_end=self._on_viewport_right_drag_end,
+        )
         self._camera_specs = (
             ("/World/Cam_1", Gf.Vec3d(-500.0, 350.0, 500.0), Gf.Vec3d(-25.0, -45.0, 0.0)),
             ("/World/Cam_2", Gf.Vec3d(500.0, 350.0, 500.0), Gf.Vec3d(-25.0, 45.0, 0.0)),
@@ -163,6 +169,25 @@ class MyExtension(omni.ext.IExt):
         register_viewport_host(host_key, viewport.viewport_api, section_overlay_frame)
         self._viewport_host_keys.append(host_key)
         self._viewports.append(viewport)
+
+    def _on_viewport_double_click(self, event_payload: dict):
+        # TODO: 원하는 더블클릭 동작을 이 함수에 구현하면 된다.
+        # event_payload 예시 키: norm_x, norm_y, ndc_x, ndc_y, source_viewport
+        pass
+
+    def _on_viewport_right_drag_begin(self, event_payload: dict):
+        # TODO: 우클릭 드래그 시작 시점 동작을 여기에 구현한다.
+        # camera_manipulator와 유사하게 began 단계에서 기준 상태를 저장하는 용도.
+        pass
+
+    def _on_viewport_right_drag_changed(self, event_payload: dict):
+        # TODO: 우클릭 드래그 중 동작을 여기에 구현한다.
+        # 사용 가능한 delta 키: drag_dx, drag_dy, drag_ndc_dx, drag_ndc_dy
+        pass
+
+    def _on_viewport_right_drag_end(self, event_payload: dict):
+        # TODO: 우클릭 드래그 종료 시점 동작을 여기에 구현한다.
+        pass
 
     def on_shutdown(self):
         print("[morph.hytwin_viewportwidget_extension] Extension shutdown")

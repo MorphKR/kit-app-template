@@ -1,6 +1,6 @@
 ﻿import functools
 import time
-from typing import List, Set, Tuple
+from typing import Callable, List, Optional, Set, Tuple
 
 import carb.input
 import omni.kit.raycast.query as rq
@@ -25,10 +25,51 @@ class QuadViewportClickSync:
         self._input = carb.input.acquire_input_interface()
         self._input_sub_id = self._input.subscribe_to_input_events(self._on_input_event, order=0) if self._input else None
 
+        # 더블클릭 판정(전용 callback API가 없는 빌드 fallback용)
+        self._double_click_time_threshold = 0.32
+        self._double_click_ndc_threshold = 0.07
+        self._last_left_click_ts = 0.0
+        self._last_left_click_ndc = None
+        self._last_left_click_viewport = None
+
+        # 우클릭 드래그 상태 (camera_manipulator의 began/changed/ended 패턴 참고)
+        self._right_drag_active = False
+        self._right_drag_source_viewport = None
+        self._right_drag_source_target = None
+        self._right_drag_start_local = None
+        self._right_drag_last_local = None
+
+        # 외부 확장 포인트 콜백
+        self._on_double_click_fn: Optional[Callable[[dict], None]] = None
+        self._on_right_drag_begin_fn: Optional[Callable[[dict], None]] = None
+        self._on_right_drag_changed_fn: Optional[Callable[[dict], None]] = None
+        self._on_right_drag_end_fn: Optional[Callable[[dict], None]] = None
+
+    def set_double_click_handler(self, fn: Optional[Callable[[dict], None]]):
+        """더블클릭 시 호출할 콜백을 등록한다."""
+        self._on_double_click_fn = fn
+
+    def set_right_drag_handlers(
+        self,
+        on_begin: Optional[Callable[[dict], None]] = None,
+        on_changed: Optional[Callable[[dict], None]] = None,
+        on_end: Optional[Callable[[dict], None]] = None,
+    ):
+        """우클릭 드래그 began/changed/ended 콜백을 등록한다."""
+        self._on_right_drag_begin_fn = on_begin
+        self._on_right_drag_changed_fn = on_changed
+        self._on_right_drag_end_fn = on_end
+
     def destroy(self):
         for _, click_target in self._entries:
             click_target.set_mouse_pressed_fn(None)
             click_target.set_mouse_wheel_fn(None)
+            if hasattr(click_target, "set_mouse_moved_fn"):
+                click_target.set_mouse_moved_fn(None)
+            if hasattr(click_target, "set_mouse_released_fn"):
+                click_target.set_mouse_released_fn(None)
+            if hasattr(click_target, "set_mouse_double_clicked_fn"):
+                click_target.set_mouse_double_clicked_fn(None)
         self._entries = []
         if self._input and self._input_sub_id is not None:
             self._input.unsubscribe_to_input_events(self._input_sub_id)
@@ -46,6 +87,24 @@ class QuadViewportClickSync:
                 source_vp, target, *args
             )
         )
+        if hasattr(click_target, "set_mouse_moved_fn"):
+            click_target.set_mouse_moved_fn(
+                lambda *args, target=click_target, source_vp=viewport_widget: self._on_mouse_moved(
+                    source_vp, target, *args
+                )
+            )
+        if hasattr(click_target, "set_mouse_released_fn"):
+            click_target.set_mouse_released_fn(
+                lambda *args, target=click_target, source_vp=viewport_widget: self._on_mouse_released(
+                    source_vp, target, *args
+                )
+            )
+        if hasattr(click_target, "set_mouse_double_clicked_fn"):
+            click_target.set_mouse_double_clicked_fn(
+                lambda x, y, button, modifiers, target=click_target, source_vp=viewport_widget: self._on_mouse_double_clicked(
+                    source_vp, target, x, y, button, modifiers
+                )
+            )
         self._entries.append((viewport_widget, click_target))
 
     def _on_mouse_wheel(self, _source_viewport, _click_target, *args):
@@ -75,26 +134,166 @@ class QuadViewportClickSync:
         self._apply_zoom_to_all_cameras(wheel_delta)
         return True
 
-    def _on_mouse_pressed(self, source_viewport, click_target, x, y, button, _modifiers):
-        # 좌클릭만 처리한다.
-        if int(button) != 0:
+    def _on_mouse_pressed(self, source_viewport, click_target, x, y, button, modifiers):
+        button = int(button)
+        payload = self._resolve_pointer_payload(source_viewport, click_target, x, y, button, modifiers)
+        if payload is None:
             return
 
+        # 우클릭: 드래그 시작점 저장
+        if button == 1:
+            self._right_drag_active = True
+            self._right_drag_source_viewport = source_viewport
+            self._right_drag_source_target = click_target
+            self._right_drag_start_local = (payload["local_x"], payload["local_y"])
+            self._right_drag_last_local = (payload["local_x"], payload["local_y"])
+            if self._on_right_drag_begin_fn:
+                self._on_right_drag_begin_fn(dict(payload))
+            return
+
+        # 좌클릭만 선택 처리
+        if button != 0:
+            return
+
+        self._emit_double_click_fallback(payload)
+        self._raycast_all_viewports(payload["norm_x"], payload["norm_y"], source_viewport)
+
+    def _on_mouse_double_clicked(self, source_viewport, click_target, x, y, button, modifiers):
+        # 빌드가 제공하는 전용 더블클릭 callback 경로
+        button = int(button)
+        if button != 0:
+            return
+        payload = self._resolve_pointer_payload(source_viewport, click_target, x, y, button, modifiers)
+        if payload is None:
+            return
+        # 더블클릭도 단일 클릭과 동일하게 모든 뷰포트에 같은 NDC로 raycast 수행
+        self._raycast_all_viewports(payload["norm_x"], payload["norm_y"], source_viewport)
+        if self._on_double_click_fn:
+            self._on_double_click_fn(payload)
+
+    def _on_mouse_moved(self, source_viewport, click_target, *args):
+        if not self._right_drag_active:
+            return
+        if source_viewport != self._right_drag_source_viewport:
+            return
+        if click_target != self._right_drag_source_target:
+            return
+        if len(args) < 2:
+            return
+        try:
+            x = float(args[0])
+            y = float(args[1])
+        except Exception:
+            return
+
+        payload = self._resolve_pointer_payload(source_viewport, click_target, x, y, button=1, modifiers=None)
+        if payload is None:
+            return
+
+        last_x, last_y = self._right_drag_last_local
+        start_x, start_y = self._right_drag_start_local
+        payload["drag_dx"] = payload["local_x"] - last_x
+        payload["drag_dy"] = payload["local_y"] - last_y
+        payload["drag_total_dx"] = payload["local_x"] - start_x
+        payload["drag_total_dy"] = payload["local_y"] - start_y
+        payload["drag_ndc_dx"] = (payload["drag_dx"] / payload["width"]) * 2.0
+        payload["drag_ndc_dy"] = -(payload["drag_dy"] / payload["height"]) * 2.0
+        payload["drag_total_ndc_dx"] = (payload["drag_total_dx"] / payload["width"]) * 2.0
+        payload["drag_total_ndc_dy"] = -(payload["drag_total_dy"] / payload["height"]) * 2.0
+        self._right_drag_last_local = (payload["local_x"], payload["local_y"])
+
+        if self._on_right_drag_changed_fn:
+            self._on_right_drag_changed_fn(payload)
+
+    def _on_mouse_released(self, source_viewport, click_target, *args):
+        if not self._right_drag_active:
+            return
+        if source_viewport != self._right_drag_source_viewport:
+            return
+        if click_target != self._right_drag_source_target:
+            return
+        if len(args) < 3:
+            self._clear_right_drag_state()
+            return
+        try:
+            x = float(args[0])
+            y = float(args[1])
+            button = int(args[2])
+            modifiers = args[3] if len(args) > 3 else None
+        except Exception:
+            self._clear_right_drag_state()
+            return
+
+        # 우클릭 릴리즈에서만 종료 처리
+        if button != 1:
+            return
+
+        payload = self._resolve_pointer_payload(source_viewport, click_target, x, y, button=button, modifiers=modifiers)
+        if payload is not None and self._right_drag_start_local is not None:
+            start_x, start_y = self._right_drag_start_local
+            payload["drag_total_dx"] = payload["local_x"] - start_x
+            payload["drag_total_dy"] = payload["local_y"] - start_y
+            payload["drag_total_ndc_dx"] = (payload["drag_total_dx"] / payload["width"]) * 2.0
+            payload["drag_total_ndc_dy"] = -(payload["drag_total_dy"] / payload["height"]) * 2.0
+            if self._on_right_drag_end_fn:
+                self._on_right_drag_end_fn(payload)
+
+        self._clear_right_drag_state()
+
+    def _clear_right_drag_state(self):
+        self._right_drag_active = False
+        self._right_drag_source_viewport = None
+        self._right_drag_source_target = None
+        self._right_drag_start_local = None
+        self._right_drag_last_local = None
+
+    def _emit_double_click_fallback(self, payload: dict):
+        # 전용 double-click callback이 없는 빌드에서도 동작하도록 시간+거리 기반 fallback 제공
+        now = time.perf_counter()
+        curr_ndc = (payload["ndc_x"], payload["ndc_y"])
+        same_viewport = self._last_left_click_viewport == payload["source_viewport"]
+        fast_enough = (now - self._last_left_click_ts) <= self._double_click_time_threshold
+        near_enough = False
+        if self._last_left_click_ndc is not None:
+            dx = curr_ndc[0] - self._last_left_click_ndc[0]
+            dy = curr_ndc[1] - self._last_left_click_ndc[1]
+            near_enough = (dx * dx + dy * dy) ** 0.5 <= self._double_click_ndc_threshold
+        if same_viewport and fast_enough and near_enough and self._on_double_click_fn:
+            self._on_double_click_fn(dict(payload))
+
+        self._last_left_click_ts = now
+        self._last_left_click_ndc = curr_ndc
+        self._last_left_click_viewport = payload["source_viewport"]
+
+    def _resolve_pointer_payload(self, source_viewport, click_target, x, y, button, modifiers):
         width = float(max(1.0, click_target.computed_width))
         height = float(max(1.0, click_target.computed_height))
         local_xy = self._resolve_local_xy(click_target, float(x), float(y), width, height)
         if local_xy is None:
-            return
+            return None
         local_x, local_y = local_xy
 
-        # 클릭된 뷰포트 영역 밖 좌표는 무시한다.
         if local_x < 0.0 or local_x > width or local_y < 0.0 or local_y > height:
-            return
+            return None
 
-        # UI 픽셀 -> 정규화 좌표 [0, 1], 우하단이 (1, 1).
         norm_x = max(0.0, min(1.0, local_x / width))
         norm_y = max(0.0, min(1.0, local_y / height))
-        self._raycast_all_viewports(norm_x, norm_y, source_viewport)
+        ndc_x = norm_x * 2.0 - 1.0
+        ndc_y = 1.0 - norm_y * 2.0
+        return {
+            "source_viewport": source_viewport,
+            "click_target": click_target,
+            "local_x": local_x,
+            "local_y": local_y,
+            "width": width,
+            "height": height,
+            "norm_x": norm_x,
+            "norm_y": norm_y,
+            "ndc_x": ndc_x,
+            "ndc_y": ndc_y,
+            "button": button,
+            "modifiers": modifiers,
+        }
 
     def _raycast_all_viewports(self, norm_x: float, norm_y: float, source_viewport):
         self._query_token += 1
