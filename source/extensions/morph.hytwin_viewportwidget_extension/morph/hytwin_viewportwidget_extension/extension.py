@@ -9,8 +9,10 @@
 # its affiliates is strictly prohibited.
 
 import asyncio
+import functools
 
 import omni.ext
+import omni.kit.raycast.query as rq
 import omni.ui as ui
 import omni.usd
 from omni.kit.widget.viewport import ViewportWidget
@@ -33,7 +35,15 @@ class MyExtension(omni.ext.IExt):
         self._viewports = []
         self._viewport_host_keys = []
         self._ui_init_task = None
+        self._rqi = rq.acquire_raycast_query_interface()
+        self._ray_query_token = 0
+        self._ray_pending = 0
+        self._ray_hit_paths = set()
+        self._ray_source_had_hit = False
+        self._zoom_min_focal = 5.0
+        self._zoom_max_focal = 500.0
         self._click_sync = QuadViewportClickSync()
+        self._click_sync.set_wheel_handler(self._on_viewport_wheel)
         self._click_sync.set_double_click_handler(self._on_viewport_double_click)
         self._click_sync.set_right_drag_handlers(
             on_begin=self._on_viewport_right_drag_begin,
@@ -171,9 +181,112 @@ class MyExtension(omni.ext.IExt):
         self._viewports.append(viewport)
 
     def _on_viewport_double_click(self, event_payload: dict):
-        # TODO: 원하는 더블클릭 동작을 이 함수에 구현하면 된다.
-        # event_payload 예시 키: norm_x, norm_y, ndc_x, ndc_y, source_viewport
-        pass
+        # 더블클릭도 클릭과 동일하게 같은 NDC 좌표로 raycast를 수행한다.
+        self._raycast_from_payload(event_payload)
+
+    def _on_viewport_wheel(self, wheel_delta: float):
+        # 휠 줌 동작도 extension 레이어에서 처리한다.
+        self._apply_zoom_delta(wheel_delta)
+
+    def _raycast_from_payload(self, event_payload: dict):
+        if not event_payload:
+            return
+        self._raycast_all_viewports(
+            norm_x=event_payload["norm_x"],
+            norm_y=event_payload["norm_y"],
+            source_viewport=event_payload["source_viewport"],
+        )
+
+    def _raycast_all_viewports(self, norm_x: float, norm_y: float, source_viewport):
+        self._ray_query_token += 1
+        token = self._ray_query_token
+        self._ray_pending = 0
+        self._ray_hit_paths = set()
+        self._ray_source_had_hit = False
+
+        ndc_x = norm_x * 2.0 - 1.0
+        ndc_y = 1.0 - norm_y * 2.0
+
+        for viewport in self._viewports:
+            viewport_api = viewport.viewport_api
+            if not viewport_api or not viewport_api.stage:
+                continue
+
+            origin, direction, t_min, t_max = self._generate_picking_ray(viewport_api, ndc_x, ndc_y)
+            ray = rq.Ray(origin, direction, t_min, t_max)
+            self._ray_pending += 1
+            self._rqi.submit_raycast_query(
+                ray, functools.partial(self._on_raycast_result, token, viewport == source_viewport)
+            )
+
+    def _on_raycast_result(self, token: int, is_source_viewport: bool, *callback_args):
+        if token != self._ray_query_token:
+            return
+
+        result = None
+        for arg in callback_args:
+            if hasattr(arg, "valid") and hasattr(arg, "get_target_usd_path"):
+                result = arg
+                break
+
+        if result and result.valid:
+            prim_path = result.get_target_usd_path()
+            if prim_path:
+                self._ray_hit_paths.add(str(prim_path))
+                if is_source_viewport:
+                    self._ray_source_had_hit = True
+
+        self._ray_pending -= 1
+        if self._ray_pending <= 0:
+            self._apply_selection_from_raycast()
+
+    def _apply_selection_from_raycast(self):
+        selection = omni.usd.get_context().get_selection()
+        if not selection:
+            return
+        if self._ray_source_had_hit and self._ray_hit_paths:
+            selection.set_selected_prim_paths(sorted(self._ray_hit_paths), True)
+        else:
+            selection.clear_selected_prim_paths()
+
+    @staticmethod
+    def _generate_picking_ray(viewport_api, ndc_x: float, ndc_y: float):
+        ndc_near = (ndc_x, ndc_y, -1.0)
+        ndc_far = (ndc_x, ndc_y, 1.0)
+        view_proj_inv = (viewport_api.view * viewport_api.projection).GetInverse()
+
+        origin = view_proj_inv.Transform(ndc_near)
+        direction = view_proj_inv.Transform(ndc_far) - origin
+        direction = direction.GetNormalized()
+        return ((origin[0], origin[1], origin[2]), (direction[0], direction[1], direction[2]), 0.0, float("inf"))
+
+    def _apply_zoom_delta(self, wheel_delta: float):
+        steps = wheel_delta / 120.0 if abs(wheel_delta) > 10.0 else wheel_delta
+        if abs(steps) <= 1e-6:
+            return
+
+        zoom_factor = 1.1 ** steps
+        for viewport in self._viewports:
+            viewport_api = viewport.viewport_api
+            if not viewport_api or not viewport_api.stage:
+                continue
+
+            camera_path = str(viewport_api.camera_path) if viewport_api.camera_path else ""
+            if not camera_path:
+                continue
+
+            camera_prim = viewport_api.stage.GetPrimAtPath(camera_path)
+            if not camera_prim or not camera_prim.IsValid():
+                continue
+
+            camera = UsdGeom.Camera(camera_prim)
+            focal_attr = camera.GetFocalLengthAttr()
+            focal = focal_attr.Get()
+            if focal is None:
+                focal = 50.0
+
+            new_focal = max(self._zoom_min_focal, min(self._zoom_max_focal, float(focal) * zoom_factor))
+            focal_attr.Set(new_focal)
 
     def _on_viewport_right_drag_begin(self, event_payload: dict):
         # TODO: 우클릭 드래그 시작 시점 동작을 여기에 구현한다.
@@ -199,6 +312,7 @@ class MyExtension(omni.ext.IExt):
         if self._click_sync:
             self._click_sync.destroy()
             self._click_sync = None
+        self._rqi = None
 
         for viewport in self._viewports:
             viewport.destroy()
