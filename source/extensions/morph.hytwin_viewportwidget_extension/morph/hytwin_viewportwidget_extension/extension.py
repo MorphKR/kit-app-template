@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+﻿# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 #
 # NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
@@ -21,7 +21,7 @@ from .viewport_bridge import register_viewport_host, unregister_viewport_host
 
 
 class MyExtension(omni.ext.IExt):
-    """Show a 2x2 viewport layout backed by ViewportWidget."""
+    """ViewportWidget 기반 2x2 분할 뷰포트를 구성한다."""
 
     def on_startup(self, _ext_id):
         print("[morph.hytwin_viewportwidget_extension] Extension startup")
@@ -56,7 +56,7 @@ class MyExtension(omni.ext.IExt):
 
     async def _deferred_init_ui(self):
         try:
-            # Delay only the deferred UI init entrypoint by 5 second.
+            # UI 지연 초기화 진입점만 5초 지연한다.
             await asyncio.sleep(5.0)
 
             self._ensure_stage_y_up()
@@ -105,15 +105,15 @@ class MyExtension(omni.ext.IExt):
                     self._create_interactive_viewport(self._camera_specs[2][0], "quad_2")
                     ui.Rectangle(width=divider_size, style={"background_color": divider_color})
                     self._create_interactive_viewport(self._camera_specs[3][0], "quad_3")
-        # Docking is deferred to _dock_to_main_viewport_async for startup safety.
+        # 시작 시 안정성을 위해 도킹은 _dock_to_main_viewport_async에서 처리한다.
 
     async def _dock_to_main_viewport_async(self):
         if not self._window:
             return
 
-        # Preferred: let Kit dock when target window becomes active/ready.
+        # 우선: 타겟 윈도우가 준비되면 Kit의 deferred dock 경로를 사용한다.
         self._window.deferred_dock_in("Viewport", ui.DockPolicy.CURRENT_WINDOW_IS_ACTIVE)
-        # Fallback: if Viewport is already available now, dock immediately.
+        # fallback: Viewport 윈도우가 이미 열려 있으면 즉시 도킹한다.
         for window_name in ("Viewport", "Viewport 1"):
             main_viewport_window = ui.Workspace.get_window(window_name)
             if main_viewport_window:
@@ -135,7 +135,7 @@ class MyExtension(omni.ext.IExt):
                 width=ui.Fraction(1.0),
                 height=ui.Fraction(1.0),
             )
-            # Frame used by scene-based tools (e.g. section tool) to attach overlay widgets.
+            # scene 기반 도구(예: section tool)가 오버레이 위젯을 붙일 frame.
             section_overlay_frame = ui.ScrollingFrame(
                 width=ui.Fraction(1.0),
                 height=ui.Fraction(1.0),
@@ -144,21 +144,21 @@ class MyExtension(omni.ext.IExt):
                 skip_draw_when_clipped=True,
                 style={"ScrollingFrame": {"background_color": 0x00000000}},
             )
-            # Best-effort clipping hints for different ui builds.
+            # UI 빌드별 차이를 고려한 best-effort clipping 힌트.
             for attr_name in ("content_clipping", "clip_children", "clip_to_bounds"):
                 try:
                     setattr(section_overlay_frame, attr_name, True)
                 except Exception:
                     pass
-            # Very low alpha keeps hit-testing active while remaining visually transparent.
+            # 거의 투명한 rect로 hit-test는 유지하고 화면에는 보이지 않게 한다.
             hit_rect = ui.Rectangle(
                 width=ui.Fraction(1.0),
                 height=ui.Fraction(1.0),
                 style={"background_color": ui.color(0.0, 0.0, 0.0, 0.001)},
             )
 
-        # Register click on the concrete overlay rect rather than container.
-        # This keeps callback x/y in per-quadrant local coordinates more reliably.
+        # 컨테이너가 아니라 실제 overlay rect에 클릭을 연결한다.
+        # 이렇게 해야 사분면별 local x/y 좌표가 더 안정적으로 들어온다.
         self._click_sync.register_viewport(viewport, hit_rect)
         register_viewport_host(host_key, viewport.viewport_api, section_overlay_frame)
         self._viewport_host_keys.append(host_key)

@@ -1,8 +1,8 @@
-from typing import Dict, List, Optional
+﻿from typing import Dict, List, Optional
 
 
 class ViewportWidgetHost:
-    """Adapter so other extensions can treat ViewportWidget tiles like viewport windows."""
+    """다른 확장에서 ViewportWidget 타일을 viewport window처럼 다루기 위한 어댑터."""
 
     def __init__(self, key: str, viewport_api=None, frame=None):
         self._key = key
@@ -43,4 +43,3 @@ def unregister_viewport_host(key: str):
 
 def get_registered_viewport_hosts() -> List[ViewportWidgetHost]:
     return list(_HOSTS.values())
-

@@ -1,4 +1,4 @@
-import functools
+﻿import functools
 import time
 from typing import List, Set, Tuple
 
@@ -9,7 +9,7 @@ from pxr import UsdGeom
 
 
 class QuadViewportClickSync:
-    """Broadcast a click NDC coordinate to all viewports and raycast per camera."""
+    """클릭 NDC 좌표를 모든 뷰포트로 브로드캐스트하고 카메라별 레이캐스트를 수행한다."""
 
     def __init__(self):
         self._rqi = rq.acquire_raycast_query_interface()
@@ -76,7 +76,7 @@ class QuadViewportClickSync:
         return True
 
     def _on_mouse_pressed(self, source_viewport, click_target, x, y, button, _modifiers):
-        # Left click only.
+        # 좌클릭만 처리한다.
         if int(button) != 0:
             return
 
@@ -87,11 +87,11 @@ class QuadViewportClickSync:
             return
         local_x, local_y = local_xy
 
-        # Ignore coordinates outside the clicked viewport region.
+        # 클릭된 뷰포트 영역 밖 좌표는 무시한다.
         if local_x < 0.0 or local_x > width or local_y < 0.0 or local_y > height:
             return
 
-        # UI pixel -> normalized coords [0, 1], where bottom-right is (1, 1).
+        # UI 픽셀 -> 정규화 좌표 [0, 1], 우하단이 (1, 1).
         norm_x = max(0.0, min(1.0, local_x / width))
         norm_y = max(0.0, min(1.0, local_y / height))
         self._raycast_all_viewports(norm_x, norm_y, source_viewport)
@@ -103,7 +103,7 @@ class QuadViewportClickSync:
         self._hit_paths = set()
         self._source_had_hit = False
 
-        # Convert normalized coords to viewport NDC [-1, 1].
+        # 정규화 좌표를 viewport NDC [-1, 1]로 변환한다.
         ndc_x = norm_x * 2.0 - 1.0
         ndc_y = 1.0 - norm_y * 2.0
 
@@ -155,7 +155,7 @@ class QuadViewportClickSync:
 
     @staticmethod
     def _generate_picking_ray(viewport_api, ndc_x: float, ndc_y: float):
-        # Same approach used by camera_manipulator orbit_target ray generation.
+        # camera_manipulator의 orbit_target ray 생성 방식과 동일한 접근.
         ndc_near = (ndc_x, ndc_y, -1.0)
         ndc_far = (ndc_x, ndc_y, 1.0)
         view_proj_inv = (viewport_api.view * viewport_api.projection).GetInverse()
@@ -170,10 +170,10 @@ class QuadViewportClickSync:
 
     @staticmethod
     def _resolve_local_xy(click_target, x: float, y: float, width: float, height: float):
-        # First: when callback coordinates are in a parent/global space,
-        # subtract widget position if exposed by this ui build.
-        # This must run before the direct-range check, otherwise left-side tiles
-        # can be misinterpreted as already-local (because x still falls in [0, width]).
+        # 1차: 콜백 좌표가 parent/global 기준일 수 있으므로,
+        # 이 UI 빌드에서 제공하는 위젯 원점이 있으면 먼저 원점을 빼서 local로 맞춘다.
+        # 이 처리를 direct-range 체크보다 먼저 해야,
+        # 좌측 타일에서 x가 우연히 [0, width]에 들어가 local로 오인되는 문제를 줄일 수 있다.
         origin_attr_pairs = (
             ("screen_position_x", "screen_position_y"),
             ("screen_x", "screen_y"),
@@ -198,36 +198,36 @@ class QuadViewportClickSync:
             if 0.0 <= local_x <= width and 0.0 <= local_y <= height:
                 return local_x, local_y
 
-        # Next: callback already provides local widget coordinates.
+        # 2차: 콜백이 이미 위젯 local 좌표를 주는 경우.
         if 0.0 <= x <= width and 0.0 <= y <= height:
             return x, y
 
-        # 2x2 split fallback:
-        # Some ui builds report coordinates in a larger parent space.
-        # Fold them back into the local tile range.
+        # 2x2 분할 fallback:
+        # 일부 UI 빌드는 좌표를 더 큰 parent 좌표계로 보고한다.
+        # 모듈로 연산으로 타일 local 범위로 접어 넣는다.
         folded_x = x % width
         folded_y = y % height
         if 0.0 <= folded_x <= width and 0.0 <= folded_y <= height:
             return folded_x, folded_y
 
-        # If neither interpretation matches the viewport region, treat as miss.
+        # 어느 해석으로도 viewport 영역에 들어오지 않으면 miss 처리.
         return None
 
     @staticmethod
     def _extract_wheel_delta(args) -> float:
-        # Typical signatures:
+        # 일반적인 시그니처 예:
         # - (x, y, wheel_delta)
         # - (x, y, wheel_delta, modifiers)
         # - (x, y, (0.0, +/-1.0, 0))
         if len(args) >= 3:
-            # The 3rd argument is usually wheel info. It can be scalar or tuple/vector.
+            # 3번째 인자는 보통 wheel 정보다. scalar/tuple/vector 모두 가능.
             delta = QuadViewportClickSync._coerce_delta(args[1])
             if abs(delta) > 1e-6:
                 return delta
             if isinstance(args[1], (int, float)) and not isinstance(args[1], bool):
                 return float(args[1])
 
-        # Fallback: inspect tuple/vector-like args first.
+        # fallback: tuple/vector 형태 인자를 우선 순회해 추출한다.
         for arg in args:
             if isinstance(arg, (list, tuple)):
                 delta = QuadViewportClickSync._coerce_delta(arg)
@@ -259,12 +259,12 @@ class QuadViewportClickSync:
         return 0.0
 
     def _apply_zoom_to_all_cameras(self, wheel_delta: float):
-        # Normalize Windows wheel ticks (often +/-120) into logical steps.
+        # Windows wheel tick(보통 +/-120)을 논리 step으로 정규화한다.
         steps = wheel_delta / 120.0 if abs(wheel_delta) > 10.0 else wheel_delta
         if abs(steps) <= 1e-6:
             return
 
-        # Positive wheel => zoom in (larger focal length).
+        # wheel 양수 => 줌인(초점거리 증가).
         zoom_factor = 1.1 ** steps
 
         for viewport_widget, _ in self._entries:
