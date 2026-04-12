@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2021, NVIDIA CORPORATION.  All rights reserved.
+﻿# Copyright (c) 2018-2021, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -18,9 +18,10 @@ from .section_scene import SectionScene
 
 @Singleton
 class SectionTool:
-    """뷰포트 기반 섹션 도구의 생명주기를 관리한다."""
+    """뷰포트별 섹션 씬과 표시 라이프사이클을 관리한다."""
+
     def __init__(self):
-        """인스턴스의 초기 상태를 구성한다."""
+        """섹션 도구 상태를 초기화한다."""
         self._scenes = {}
         self._ext_id = None
         self._visible = False
@@ -45,29 +46,33 @@ class SectionTool:
 
     @property
     def scene(self):
-        # Backward-compatible accessor used by legacy call sites.
+        # 레거시 호출부 호환을 위한 단일 scene 접근자
         for scene in self._scenes.values():
             return scene
         return None
 
     @property
     def scenes(self):
-        """현재 상태에서 필요한 값을 조회해 반환한다."""
+        """현재 활성화된 섹션 씬 목록을 반환한다."""
         return list(self._scenes.values())
 
     def _get_viewport_key(self, viewport_window):
-        """현재 상태에서 필요한 값을 조회해 반환한다."""
+        """viewport 인스턴스를 안정적인 키 문자열로 변환한다."""
         if viewport_window is None:
             return None
+        # ViewportWidget bridge host는 host_key를 제공한다.
+        # ViewportWindow ID와 충돌하지 않게 별도 네임스페이스를 사용한다.
         host_key = getattr(viewport_window, "host_key", None)
         if host_key:
             return f"host:{host_key}"
-        # Do not depend on viewport name/title: names may change by locale/user.
+        # viewport 이름/타이틀은 환경에 따라 달라질 수 있으므로 사용하지 않는다.
         return f"id:{id(viewport_window)}"
 
     def _get_external_viewport_hosts(self):
         hosts = []
         try:
+            # bridge extension에 등록된 ViewportWidget host 목록을 조회한다.
+            # 각 host는 viewport_api/get_frame 인터페이스를 제공해야 한다.
             from morph.hytwin_viewportwidget_extension.viewport_bridge import get_registered_viewport_hosts
 
             for host in get_registered_viewport_hosts() or []:
@@ -78,10 +83,10 @@ class SectionTool:
         return hosts
 
     def _get_visible_viewport_windows(self):
-        """현재 상태에서 필요한 값을 조회해 반환한다."""
+        """현재 표시 중인 viewport window/host를 수집한다."""
         windows = []
 
-        # Utility API names differ by Kit version, so probe defensively.
+        # Kit 버전에 따라 utility API 이름이 달라 방어적으로 조회한다.
         try:
             if hasattr(vp_utils, "get_viewport_window_instances"):
                 windows = list(vp_utils.get_viewport_window_instances() or [])
@@ -93,7 +98,7 @@ class SectionTool:
         except Exception:
             windows = []
 
-        # Workspace fallback for builds where utility API returns only active viewport.
+        # 일부 빌드에서 utility API가 active viewport만 반환하는 경우를 대비한 fallback
         try:
             if hasattr(ui.Workspace, "get_windows"):
                 for win in ui.Workspace.get_windows() or []:
@@ -107,10 +112,10 @@ class SectionTool:
             if active:
                 windows = [active]
 
-        # Add custom viewport hosts (e.g. ViewportWidget tiles).
+        # 사용자 정의 viewport host(예: ViewportWidget 타일) 추가
         windows.extend(self._get_external_viewport_hosts())
 
-        # Unique by object id.
+        # 객체 id 기준으로 중복 제거
         unique = {}
         for win in windows:
             if win:
@@ -130,7 +135,7 @@ class SectionTool:
         return filtered
 
     def _sync_viewport_scenes(self):
-        """해당 함수의 핵심 로직을 수행한다."""
+        """실제 viewport 목록과 섹션 씬 목록을 동기화한다."""
         if not self._ext_id:
             return
 
@@ -141,6 +146,7 @@ class SectionTool:
                 continue
             live_keys.add(key)
             if key not in self._scenes:
+                # viewport_key별로 section prim/scene를 분리 관리한다.
                 SectionManager().get_section_widget_prim(create_if_not_exist=True, viewport_key=key)
                 self._scenes[key] = SectionScene(self._ext_id, viewport_window=viewport_window, viewport_key=key)
                 carb.log_info(f"[SectionTool] Section scene created for viewport: {key}")
@@ -167,12 +173,12 @@ class SectionTool:
         self._post_update_sub = None
 
     def _on_post_update(self, _):
-        """이벤트가 발생했을 때 후속 처리를 수행한다."""
+        """도구가 표시 중일 때 프레임마다 씬 동기화를 수행한다."""
         if self._visible:
             self._sync_viewport_scenes()
 
     def set_visibility(self, value: bool, ext_id: str) -> None:
-        """입력값을 내부 상태와 설정에 반영한다."""
+        """섹션 도구 표시 상태를 전환한다."""
         self._visible = bool(value)
         self._ext_id = ext_id
         if value:
@@ -186,6 +192,6 @@ class SectionTool:
         self.show_section_gizmo(value)
 
     def show_section_gizmo(self, value: bool):
-        """표시 상태를 변경하고 연관 상태를 동기화한다."""
+        """모든 활성 섹션 씬의 기즈모 표시 상태를 전환한다."""
         for scene in self._scenes.values():
             scene.show_section_gizmo(value)

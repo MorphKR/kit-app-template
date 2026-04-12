@@ -26,16 +26,18 @@ ATTR_SECTION_TRANSFORM = "xformOp:transform"
 
 
 class SectionModel(sc.AbstractManipulatorModel):
-    """섹션 변환 데이터를 추적하고 평면 값을 갱신한다."""
+    """섹션 트랜스폼 변화를 추적하고 section plane을 갱신한다."""
+
     class TransformItem(sc.AbstractManipulatorItem):
-        """이 모듈의 주요 기능을 구성하는 클래스다."""
+        """매니퓰레이터에서 사용하는 트랜스폼 행렬 컨테이너."""
+
         def __init__(self):
-            """인스턴스의 초기 상태를 구성한다."""
+            """트랜스폼을 단위 행렬로 초기화한다."""
             super().__init__()
             self.value = Gf.Matrix4d()
 
     def __init__(self, viewport_key: str = None, viewport_window=None):
-        """인스턴스의 초기 상태를 구성한다."""
+        """모델 상태와 USD 구독을 초기화한다."""
         super().__init__()
         self._usd_context = omni.usd.get_context()
         self._settings = carb.settings.get_settings()
@@ -54,15 +56,14 @@ class SectionModel(sc.AbstractManipulatorModel):
         )
 
         stage = omni.usd.get_context().get_stage()
-
         self._usd_listener = Tf.Notice.Register(Usd.Notice.ObjectsChanged, self._on_usd_changed, stage)
 
     def __del__(self):  # pragma: no cover
-        """사용한 구독과 리소스를 정리한다."""
+        """객체 소멸 시 리소스를 정리한다."""
         self.destroy()
 
     def destroy(self):  # pragma: no cover
-        """사용한 구독과 리소스를 정리한다."""
+        """구독을 해제하고 참조를 정리한다."""
         if self._stage_sub:
             get_eventdispatcher().unobserve_event(self._stage_sub)
             self._stage_sub = None
@@ -72,7 +73,7 @@ class SectionModel(sc.AbstractManipulatorModel):
         self._viewport_window = None
 
     def refresh(self):
-        """현재 상태를 다시 계산하고 갱신한다."""
+        """내부 상태를 초기화하고 USD 구독을 다시 생성한다."""
         self._set_section_plane([0, 0, 0, 0])
         self._usd_listener = None
         self._transform.value = Gf.Matrix4d()
@@ -80,21 +81,21 @@ class SectionModel(sc.AbstractManipulatorModel):
         self._usd_listener = Tf.Notice.Register(Usd.Notice.ObjectsChanged, self._on_usd_changed, stage)
 
     def get_item(self, identifier):
-        """현재 상태에서 필요한 값을 조회해 반환한다."""
+        """트랜스폼 아이템을 반환한다."""
         return self._transform
 
     def get_as_floats(self, item):
-        """현재 상태에서 필요한 값을 조회해 반환한다."""
+        """현재 트랜스폼 값을 반환한다."""
         return self._transform.value
 
     def _get_section_edit_context(self):
-        """현재 상태에서 필요한 값을 조회해 반환한다."""
+        """현재 섹션 레이어에 대한 편집 컨텍스트를 반환한다."""
         stage = omni.usd.get_context().get_stage()
         sect_layer = self._get_section_layer()
         return Usd.EditContext(stage, sect_layer)
 
     def _get_section_layer(self):
-        """현재 상태에서 필요한 값을 조회해 반환한다."""
+        """설정값에 따라 session/root 레이어를 선택한다."""
         settings = carb.settings.get_settings()
         use_session_layer = settings.get(SETTING_SECTION_USE_SESSION_LAYER)
         stage = omni.usd.get_context().get_stage()
@@ -103,7 +104,7 @@ class SectionModel(sc.AbstractManipulatorModel):
         return stage.GetRootLayer()
 
     def set_floats(self, item, value):
-        """입력값을 내부 상태와 설정에 반영한다."""
+        """트랜스폼 값을 반영하고 section plane을 갱신한다."""
         with self._get_section_edit_context():
             if not value:
                 return
@@ -113,7 +114,7 @@ class SectionModel(sc.AbstractManipulatorModel):
             self._item_changed(self._transform)
 
     def _on_usd_changed(self, notice, stage):
-        """이벤트가 발생했을 때 후속 처리를 수행한다."""
+        """USD 속성 변경 시 모델 값을 동기화한다."""
         with self._get_section_edit_context():
             section_transform_attr = SectionManager().get_transform_attr(viewport_key=self._viewport_key)
             if not section_transform_attr:
@@ -124,18 +125,20 @@ class SectionModel(sc.AbstractManipulatorModel):
                 self.set_floats(self._transform, section_transform_attr.Get())
 
     def _on_stage_closing(self, _):
-        """이벤트가 발생했을 때 후속 처리를 수행한다."""
+        """스테이지 종료 시 모델 상태를 초기화한다."""
         self.refresh()
         omni.usd.get_context().set_pending_edit(False)
 
     def _set_section_plane(self, value: list):
-        """입력값을 내부 상태와 설정에 반영한다."""
+        """현재 viewport의 render product prim에 section plane을 기록한다."""
         try:
             stage = omni.usd.get_context().get_stage()
+            # ViewportWidget host가 전달된 경우 해당 viewport_api를 사용한다.
             viewport_api = self._viewport_window.viewport_api if self._viewport_window else None
             if not viewport_api:
-
                 return
+
+            # viewport_api.render_product_path: 현재 카메라 화면의 render prim 경로
             render_path = viewport_api.render_product_path
             prim = stage.GetPrimAtPath(render_path)
             if prim and prim.IsValid():
@@ -145,9 +148,8 @@ class SectionModel(sc.AbstractManipulatorModel):
             carb.log_warn(f"Failed to set section plane attribute: {e}")
 
     def update_section_plane(self):
-        """해당 함수의 핵심 로직을 수행한다."""
+        """현재 트랜스폼 기준으로 section plane을 계산해 적용한다."""
         with self._get_section_edit_context():
-
             if self._settings.get_as_int(SETTING_SECTION_DIRECTION) == SECTION_DIRECTION_TOP:
                 direction = Gf.Vec3d(0, 0, -1)
             else:
