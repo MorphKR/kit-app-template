@@ -1,27 +1,27 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+﻿# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 
 import asyncio
 
+import carb.settings
 import omni.ext
-import omni.kit.raycast.query as rq
 import omni.ui as ui
 import omni.usd
+from omni.kit.viewport.navigation.core import NAVIGATION_TOOL_OPERATION_ACTIVE
+from omni.kit.viewport.navigation.camera_manipulator.navigation_scene import NavigationScene
 from omni.kit.widget.viewport import ViewportWidget
+from omni.ui import scene as sc
 from pxr import Gf, UsdGeom
 
-from .click_sync import QuadViewportClickSync
-from .gestures import ViewportInteractionController
 from .viewport_bridge import register_viewport_host, unregister_viewport_host
 
 
 class MyExtension(omni.ext.IExt):
     """4분할 ViewportWidget 확장.
 
-    역할 분리:
-    - extension.py: 창/레이아웃/카메라 생성과 생명주기 관리
-    - click_sync.py: Scene Gesture 연결과 payload 변환
-    - gestures.py: 선택/줌/드래그 동작 로직
+    이 확장은 ViewportWidget만 구성하고,
+    카메라 제스처는 camera_manipulator의 NavigationScene을
+    ViewportWidget overlay SceneView에 수동 attach해서 사용한다.
     """
 
     _UI_INIT_DELAY_SEC = 5.0
@@ -29,9 +29,6 @@ class MyExtension(omni.ext.IExt):
     _WINDOW_WIDTH = 1200
     _WINDOW_HEIGHT = 800
     _DIVIDER_SIZE = 1
-
-    _ZOOM_MIN_FOCAL = 5.0
-    _ZOOM_MAX_FOCAL = 500.0
 
     _CAMERA_SPECS = (
         ("/World/Cam_1", Gf.Vec3d(-500.0, 350.0, 500.0), Gf.Vec3d(-25.0, -45.0, 0.0)),
@@ -49,22 +46,11 @@ class MyExtension(omni.ext.IExt):
         # 상태/핸들 초기화
         self._window = None
         self._viewports = []
+        self._overlay_frames = []
+        self._navigation_entries = []
         self._viewport_host_keys = []
         self._ui_init_task = None
 
-        # 입력/상호작용 계층 초기화
-        self._rqi = rq.acquire_raycast_query_interface()
-        self._click_sync = QuadViewportClickSync()
-        self._interaction_controller = ViewportInteractionController(
-            get_viewports_fn=lambda: self._viewports,
-            raycast_query_interface=self._rqi,
-            get_selection_fn=lambda: omni.usd.get_context().get_selection(),
-            zoom_min_focal=self._ZOOM_MIN_FOCAL,
-            zoom_max_focal=self._ZOOM_MAX_FOCAL,
-        )
-        self._click_sync.set_interaction_controller(self._interaction_controller)
-
-        # stage 이벤트 구독
         self._stage_sub = omni.usd.get_context().get_stage_event_stream().create_subscription_to_pop(
             self._on_stage_event,
             name="morph.hytwin_viewportwidget_extension.stage_events",
@@ -84,27 +70,19 @@ class MyExtension(omni.ext.IExt):
             self._ui_init_task.cancel()
             self._ui_init_task = None
 
-        # 입력/상호작용 리소스 정리
-        if self._click_sync:
-            self._click_sync.destroy()
-            self._click_sync = None
-        self._interaction_controller = None
-        self._rqi = None
+        self._destroy_navigation_scenes()
 
-        # 생성한 viewport와 bridge 정리
         for viewport in self._viewports:
             viewport.destroy()
         self._viewports = []
+        self._overlay_frames = []
+
         for host_key in self._viewport_host_keys:
             unregister_viewport_host(host_key)
         self._viewport_host_keys = []
 
-        if self._window:
-            self._window = None
+        self._window = None
 
-    # ------------------------------------------------------------------
-    # Stage 기반 초기화
-    # ------------------------------------------------------------------
     def _on_stage_event(self, event):
         if event.type == int(omni.usd.StageEventType.OPENED):
             self._schedule_ui_init()
@@ -122,6 +100,7 @@ class MyExtension(omni.ext.IExt):
             self._ensure_quad_cameras()
             self._create_ui_if_needed()
             self._bind_viewport_cameras()
+            self._attach_navigation_scenes()
             await self._dock_to_main_viewport_async()
         finally:
             self._ui_init_task = None
@@ -138,10 +117,10 @@ class MyExtension(omni.ext.IExt):
             UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
 
     def _ensure_quad_cameras(self):
-        # 4분할 타일에 대응되는 카메라 prim을 생성/갱신한다.
         stage = omni.usd.get_context().get_stage()
         if not stage:
             return
+
         for camera_path, translate, rotate in self._CAMERA_SPECS:
             camera_prim = UsdGeom.Camera.Define(stage, camera_path)
             xform = UsdGeom.Xformable(camera_prim)
@@ -150,13 +129,74 @@ class MyExtension(omni.ext.IExt):
             xform.AddRotateXYZOp(UsdGeom.XformOp.PrecisionDouble).Set(rotate)
 
     def _bind_viewport_cameras(self):
-        # 생성된 ViewportWidget에 카메라 경로를 바인딩한다.
         for viewport, (camera_path, _, _) in zip(self._viewports, self._CAMERA_SPECS):
             viewport.viewport_api.camera_path = camera_path
 
-    # ------------------------------------------------------------------
-    # 4분할 UI 구성
-    # ------------------------------------------------------------------
+    def _attach_navigation_scenes(self):
+        """각 ViewportWidget에 NavigationScene을 SceneView 기반으로 수동 attach한다."""
+        self._destroy_navigation_scenes()
+        self._ensure_navigation_operation_enabled()
+
+        for viewport, overlay_frame in zip(self._viewports, self._overlay_frames):
+            viewport_api = getattr(viewport, "viewport_api", None)
+            if viewport_api is None:
+                continue
+            with overlay_frame:
+                scene_view = sc.SceneView()
+                with scene_view.scene:
+                    navigation_scene = NavigationScene(
+                        {
+                            "viewport_api": viewport_api,
+                            "usd_context_name": getattr(viewport_api, "usd_context_name", ""),
+                            "layer_provider": None,
+                        }
+                    )
+            viewport_api.add_scene_view(scene_view)
+            self._navigation_entries.append(
+                {
+                    "viewport_api": viewport_api,
+                    "scene_view": scene_view,
+                    "navigation_scene": navigation_scene,
+                }
+            )
+
+    def _ensure_navigation_operation_enabled(self):
+        settings = carb.settings.get_settings()
+        current_operation = settings.get(NAVIGATION_TOOL_OPERATION_ACTIVE)
+        if current_operation not in ("orbit", "pan", "look", "dolly"):
+            settings.set(NAVIGATION_TOOL_OPERATION_ACTIVE, "orbit")
+            print(
+                "[morph.hytwin_viewportwidget_extension] "
+                f"Set navigation operation to 'orbit' (was: {current_operation})"
+            )
+        else:
+            print(
+                "[morph.hytwin_viewportwidget_extension] "
+                f"Current navigation operation: {current_operation}"
+            )
+
+    def _destroy_navigation_scenes(self):
+        for entry in self._navigation_entries:
+            viewport_api = entry.get("viewport_api")
+            scene_view = entry.get("scene_view")
+            navigation_scene = entry.get("navigation_scene")
+            try:
+                if viewport_api and scene_view:
+                    viewport_api.remove_scene_view(scene_view)
+            except Exception:
+                pass
+            try:
+                if navigation_scene:
+                    navigation_scene.destroy()
+            except Exception:
+                pass
+            try:
+                if scene_view:
+                    scene_view.destroy()
+            except Exception:
+                pass
+        self._navigation_entries = []
+
     def _create_ui_if_needed(self):
         if self._window:
             return
@@ -177,7 +217,6 @@ class MyExtension(omni.ext.IExt):
                     self._create_viewport_tile(self._CAMERA_SPECS[3][0], "quad_3")
 
     def _create_viewport_tile(self, camera_path: str, host_key: str):
-        # 타일 하나 = ViewportWidget + overlay frame(gesture/section overlay 공유)
         tile = ui.ZStack(width=ui.Fraction(1.0), height=ui.Fraction(1.0), skip_draw_when_clipped=True)
         with tile:
             viewport = ViewportWidget(
@@ -201,12 +240,11 @@ class MyExtension(omni.ext.IExt):
                 except Exception:
                     pass
 
-        # 타일별 Scene Gesture와 section overlay bridge를 등록한다.
-        self._click_sync.register_viewport(viewport, overlay_frame)
         register_viewport_host(host_key, viewport.viewport_api, overlay_frame)
 
         self._viewport_host_keys.append(host_key)
         self._viewports.append(viewport)
+        self._overlay_frames.append(overlay_frame)
 
     async def _dock_to_main_viewport_async(self):
         if not self._window:

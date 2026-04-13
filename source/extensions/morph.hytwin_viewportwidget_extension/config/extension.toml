@@ -25,6 +25,7 @@ repository = "https://github.com/NVIDIA-Omniverse/kit-app-template"  # URL of th
 "omni.kit.uiapp" = {}
 "omni.kit.raycast.query" = {}
 "omni.kit.widget.viewport" = {}
+"omni.kit.viewport.navigation.camera_manipulator" = {}
 "omni.usd" = {}
 
 
