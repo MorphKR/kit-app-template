@@ -1,4 +1,12 @@
-﻿import time
+﻿"""
+해당 코드는 hytwin_viewportwidget_extension의 gestures.py에서 정의된 내용을 추가한 navigation_scene.py입니다.
+이 코드는 뷰포트에서의 카메라 조작과 관련된 기능을 구현하는 데 사용됩니다.
+주요 기능으로는 클릭 및 드래그 이벤트 처리, 궤도 타겟 표시,
+그리고 다양한 카메라 이동 모드에 대한 설정 관리가 포함되어 있습니다.
+또한, 사용자의 입력에 따라 카메라 조작을 제어하는 PreventOthers 클래스도 포함되어 있습니다.
+
+
+import time
 from functools import partial
 from typing import Dict
 
@@ -549,3 +557,4 @@ class WindowFrameRect:
         style = {"Rectangle::position": {"background_color": 0x00000000, "border_width": 0, "border_radius": 0}}
         with ui.Placer(offset_x=0, offset_y=0, draggable=False, style=style):
             self._position = ui.Rectangle(name="position", width=100, height=100, style=style)
+"""
