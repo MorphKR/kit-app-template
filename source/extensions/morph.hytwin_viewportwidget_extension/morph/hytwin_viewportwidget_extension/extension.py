@@ -5,6 +5,7 @@ import asyncio
 
 import carb.settings
 import omni.ext
+import omni.kit.raycast.query as rq
 import omni.ui as ui
 import omni.usd
 from omni.kit.viewport.navigation.core import NAVIGATION_TOOL_OPERATION_ACTIVE
@@ -13,6 +14,7 @@ from omni.kit.widget.viewport import ViewportWidget
 from omni.ui import scene as sc
 from pxr import Gf, UsdGeom
 
+from .gestures import ViewportInteractionController
 from .viewport_bridge import register_viewport_host, unregister_viewport_host
 
 
@@ -29,6 +31,7 @@ class MyExtension(omni.ext.IExt):
     _WINDOW_WIDTH = 1200
     _WINDOW_HEIGHT = 800
     _DIVIDER_SIZE = 1
+    _ENABLE_CUSTOM_INTERACTION = True  # 커스텀 클릭/드래그 동기화 로직 활성화 여부
 
     _CAMERA_SPECS = (
         ("/World/Cam_1", Gf.Vec3d(-500.0, 350.0, 500.0), Gf.Vec3d(-25.0, -45.0, 0.0)),
@@ -50,6 +53,17 @@ class MyExtension(omni.ext.IExt):
         self._navigation_entries = []
         self._viewport_host_keys = []
         self._ui_init_task = None
+        self._interaction_controller = None
+        self._rqi = None
+
+        self._rqi = rq.acquire_raycast_query_interface()
+        self._interaction_controller = None
+        if self._ENABLE_CUSTOM_INTERACTION:
+            self._interaction_controller = ViewportInteractionController(
+                get_viewports_fn=lambda: self._viewports,
+                raycast_query_interface=self._rqi,
+                get_selection_fn=lambda: omni.usd.get_context().get_selection(),
+            )
 
         self._stage_sub = omni.usd.get_context().get_stage_event_stream().create_subscription_to_pop(
             self._on_stage_event,
@@ -71,6 +85,8 @@ class MyExtension(omni.ext.IExt):
             self._ui_init_task = None
 
         self._destroy_navigation_scenes()
+        self._interaction_controller = None
+        self._rqi = None
 
         for viewport in self._viewports:
             viewport.destroy()
@@ -144,13 +160,7 @@ class MyExtension(omni.ext.IExt):
             with overlay_frame:
                 scene_view = sc.SceneView()
                 with scene_view.scene:
-                    navigation_scene = NavigationScene(
-                        {
-                            "viewport_api": viewport_api,
-                            "usd_context_name": getattr(viewport_api, "usd_context_name", ""),
-                            "layer_provider": None,
-                        }
-                    )
+                    navigation_scene = NavigationScene(self._build_navigation_factory_args(viewport_api))
             viewport_api.add_scene_view(scene_view)
             self._navigation_entries.append(
                 {
@@ -160,14 +170,36 @@ class MyExtension(omni.ext.IExt):
                 }
             )
 
+    def _build_navigation_factory_args(self, viewport_api):
+        """NavigationScene 생성 인자를 구성한다.
+
+        - 기본 내비게이션 동작에 필요한 viewport 메타 정보는 항상 전달
+        - hytwin 커스텀 동기화 기능은 토글에 따라 선택적으로 전달
+        """
+        args = {
+            "viewport_api": viewport_api,
+            "usd_context_name": getattr(viewport_api, "usd_context_name", ""),
+            "layer_provider": None,
+        }
+        if self._ENABLE_CUSTOM_INTERACTION:
+            args.update(
+                {
+                    "on_click_ndc": self._on_navigation_scene_click_ndc,
+                    "on_right_drag_begin": self._on_navigation_scene_right_drag_begin,
+                    "on_right_drag_changed": self._on_navigation_scene_right_drag_changed,
+                    "on_right_drag_end": self._on_navigation_scene_right_drag_end,
+                }
+            )
+        return args
+
     def _ensure_navigation_operation_enabled(self):
         settings = carb.settings.get_settings()
         current_operation = settings.get(NAVIGATION_TOOL_OPERATION_ACTIVE)
         if current_operation not in ("orbit", "pan", "look", "dolly"):
-            settings.set(NAVIGATION_TOOL_OPERATION_ACTIVE, "orbit")
+            settings.set(NAVIGATION_TOOL_OPERATION_ACTIVE, "none")
             print(
                 "[morph.hytwin_viewportwidget_extension] "
-                f"Set navigation operation to 'orbit' (was: {current_operation})"
+                f"Keep navigation operation as 'none' (was: {current_operation})"
             )
         else:
             print(
@@ -196,6 +228,43 @@ class MyExtension(omni.ext.IExt):
             except Exception:
                 pass
         self._navigation_entries = []
+
+    def _on_navigation_scene_click_ndc(self, viewport_api, ndc_x: float, ndc_y: float):
+        """NavigationScene 클릭 이벤트를 hytwin 클릭 동기화 로직으로 전달한다."""
+        if not self._ENABLE_CUSTOM_INTERACTION or not self._interaction_controller:
+            return
+
+        source_viewport = None
+        for viewport in self._viewports:
+            if getattr(viewport, "viewport_api", None) is viewport_api:
+                source_viewport = viewport
+                break
+        if source_viewport is None:
+            return
+
+        norm_x = max(0.0, min(1.0, (ndc_x + 1.0) * 0.5))
+        norm_y = max(0.0, min(1.0, (1.0 - ndc_y) * 0.5))
+        self._interaction_controller.handle_click(
+            {
+                "source_viewport": source_viewport,
+                "norm_x": norm_x,
+                "norm_y": norm_y,
+                "ndc_x": ndc_x,
+                "ndc_y": ndc_y,
+            }
+        )
+
+    def _on_navigation_scene_right_drag_begin(self, viewport_api, ndc_x: float, ndc_y: float):
+        del viewport_api, ndc_x, ndc_y
+
+    def _on_navigation_scene_right_drag_changed(self, viewport_api, ndc_x: float, ndc_y: float, dndc_x: float, dndc_y: float):
+        del viewport_api, ndc_x, ndc_y
+        if not self._ENABLE_CUSTOM_INTERACTION or not self._interaction_controller:
+            return
+        self._interaction_controller.handle_right_drag_delta(dndc_x, dndc_y)
+
+    def _on_navigation_scene_right_drag_end(self, viewport_api, ndc_x: float, ndc_y: float):
+        del viewport_api, ndc_x, ndc_y
 
     def _create_ui_if_needed(self):
         if self._window:
