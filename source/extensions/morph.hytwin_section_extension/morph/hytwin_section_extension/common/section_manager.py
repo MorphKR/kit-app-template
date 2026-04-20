@@ -52,6 +52,12 @@ class WidgetAlignment:
     Z = "z"
 
 
+class MoveTargetMode:
+    """이 모듈의 주요 기능을 구성하는 클래스다."""
+    Selected = "selected"
+    All = "all"
+
+
 @Singleton
 class SectionManager:
     """섹션 상태와 런타임 동작을 중앙에서 관리한다."""
@@ -65,6 +71,8 @@ class SectionManager:
         self._bboxcache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), purposes)
         self._align_axis = WidgetAlignment.Z
         self._center_aligned_prim_path = None
+        self._move_target_mode = MoveTargetMode.Selected
+        self._target_scene_index = 0
 
         self.refresh()
 
@@ -182,8 +190,9 @@ class SectionManager:
 
             self.save_section(section["name"])
 
-    def align_widget(self, align, apply_to_all_scenes: bool = True, scene_index: int = None):
+    def align_widget(self, align, apply_to_all_scenes: bool = None, scene_index: int = None):
         """선택한 축 기준으로 섹션을 정렬한다."""
+        apply_to_all_scenes = self._resolve_apply_to_all(apply_to_all_scenes)
         if align in (WidgetAlignment.X, WidgetAlignment.Y, WidgetAlignment.Z):
             self._align_axis = align
         if align == WidgetAlignment.X:
@@ -197,18 +206,19 @@ class SectionManager:
             rotation, apply_to_all_scenes=apply_to_all_scenes, scene_index=scene_index
         )
 
-    def rotate_widget(self, align, angle, apply_to_all_scenes: bool = True, scene_index: int = None):
+    def rotate_widget(self, align, angle, apply_to_all_scenes: bool = None, scene_index: int = None):
         """현재 축과 각도 설정으로 섹션을 회전한다."""
+        apply_to_all_scenes = self._resolve_apply_to_all(apply_to_all_scenes)
         self._apply_incremental_rotation_to_widget_transforms(align=align, angle=angle, apply_to_all_scenes=apply_to_all_scenes, scene_index=scene_index)
 
-    def set_widget_position(self, position):
+    def set_widget_position(self, position, apply_to_all_scenes: bool = None, scene_index: int = None):
         """입력값을 내부 상태와 설정에 반영한다."""
+        apply_to_all_scenes = self._resolve_apply_to_all(apply_to_all_scenes)
         with self._get_section_edit_context():
             position = self._round_vec3(position)
             if position is None:
                 return
-            transform_attr = self._resolve_target_transform_attr()
-            if transform_attr:
+            for transform_attr in self._iter_target_transform_attrs(apply_to_all_scenes, scene_index=scene_index):
                 transform = transform_attr.Get()
                 transform.SetTranslateOnly(position)
                 transform_attr.Set(transform)
@@ -245,8 +255,11 @@ class SectionManager:
             return selected_attr
         return None
 
-    def set_widget_position_from_prim_path(self, prim_path: str) -> bool:
+    def set_widget_position_from_prim_path(
+        self, prim_path: str, apply_to_all_scenes: bool = None, scene_index: int = None
+    ) -> bool:
         """입력값을 내부 상태와 설정에 반영한다."""
+        apply_to_all_scenes = self._resolve_apply_to_all(apply_to_all_scenes)
         if not prim_path:
             carb.log_warn("[SectionTool] set_widget_position_from_prim_path: empty prim path")
             return False
@@ -257,8 +270,8 @@ class SectionManager:
             carb.log_warn("[SectionTool] set_widget_position_from_prim_path: stage is not ready")
             return False
 
-        # 대상 transform 확보(선택된 섹션 우선, 없으면 기본 섹션).
-        if not self._resolve_target_transform_attr():
+        target_attrs = self._iter_target_transform_attrs(apply_to_all_scenes, scene_index=scene_index)
+        if not target_attrs:
             carb.log_warn("[SectionTool] set_widget_position_from_prim_path: section transform attribute is missing")
             return False
 
@@ -271,7 +284,7 @@ class SectionManager:
         if center is None:
             carb.log_warn(f"[SectionTool] set_widget_position_from_prim_path: failed to compute center: {prim_path}")
             return False
-        self.set_widget_position(center)
+        self.set_widget_position(center, apply_to_all_scenes=apply_to_all_scenes, scene_index=scene_index)
         self._center_aligned_prim_path = prim_path
         carb.log_info(f"[SectionTool] section moved to prim center: {prim_path} -> {center}")
         return True
@@ -283,7 +296,47 @@ class SectionManager:
     def get_align_axis(self) -> str:
         return self._align_axis or WidgetAlignment.Z
 
-    def move_widget_in_center_aligned_prim_aabb(self, value: float) -> bool:
+    def set_move_target_mode(self, mode: str) -> None:
+        mode = str(mode or "").strip().lower()
+        if mode in (MoveTargetMode.Selected, MoveTargetMode.All):
+            self._move_target_mode = mode
+
+    def get_move_target_mode(self) -> str:
+        return self._move_target_mode or MoveTargetMode.Selected
+
+    def set_move_target_all(self, enabled: bool) -> None:
+        self._move_target_mode = MoveTargetMode.All if bool(enabled) else MoveTargetMode.Selected
+
+    def is_move_target_all(self) -> bool:
+        return self.get_move_target_mode() == MoveTargetMode.All
+
+    def set_target_scene_index(self, scene_index: int) -> bool:
+        """UI 없이 단일 대상 scene을 지정할 수 있도록 0~3 index를 저장한다."""
+        try:
+            index = int(scene_index)
+        except Exception:
+            carb.log_warn(f"[SectionTool] set_target_scene_index: invalid value: {scene_index}")
+            return False
+
+        if index < 0 or index > 3:
+            carb.log_warn(f"[SectionTool] set_target_scene_index: out of range (0~3): {index}")
+            return False
+
+        self._target_scene_index = index
+        return True
+
+    def get_target_scene_index(self) -> int:
+        return int(self._target_scene_index)
+
+    def _resolve_apply_to_all(self, apply_to_all_scenes: bool = None) -> bool:
+        if apply_to_all_scenes is None:
+            return self.is_move_target_all()
+        return bool(apply_to_all_scenes)
+
+    def move_widget_in_center_aligned_prim_aabb(
+        self, value: float, apply_to_all_scenes: bool = None, scene_index: int = None
+    ) -> bool:
+        apply_to_all_scenes = self._resolve_apply_to_all(apply_to_all_scenes)
         t = float(value)
 
         if t < 0.0:
@@ -311,22 +364,23 @@ class SectionManager:
         target_axis = axis_min + (axis_max - axis_min) * t
 
         with self._get_section_edit_context():
-            transform_attr = self._resolve_target_transform_attr()
-            if not transform_attr:
+            target_attrs = self._iter_target_transform_attrs(apply_to_all_scenes, scene_index=scene_index)
+            if not target_attrs:
                 carb.log_warn("[SectionTool] move_widget_in_center_aligned_prim_aabb: section transform attribute is missing")
                 return False
 
-            transform = transform_attr.Get()
-            current_pos = transform.ExtractTranslation()
-            target_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])
-            target_pos[axis_index] = target_axis
-            target_pos = self._round_vec3(target_pos)
-            if target_pos is None:
-                carb.log_warn("[SectionTool] move_widget_in_center_aligned_prim_aabb: failed to round target position")
-                return False
+            for transform_attr in target_attrs:
+                transform = transform_attr.Get()
+                current_pos = transform.ExtractTranslation()
+                target_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])
+                target_pos[axis_index] = target_axis
+                target_pos = self._round_vec3(target_pos)
+                if target_pos is None:
+                    carb.log_warn("[SectionTool] move_widget_in_center_aligned_prim_aabb: failed to round target position")
+                    return False
 
-            transform.SetTranslateOnly(target_pos)
-            transform_attr.Set(transform)
+                transform.SetTranslateOnly(target_pos)
+                transform_attr.Set(transform)
 
         return True
 
@@ -842,14 +896,14 @@ class SectionManager:
             attrs = self._iter_scene_transform_attrs()
             if attrs:
                 return attrs
-        elif scene_index is not None:
-            attr = self._get_scene_transform_attr_by_index(scene_index)
-            if attr:
-                return [attr]
-            carb.log_warn(f"[SectionTool] invalid scene index: {scene_index}")
 
-        transform_attr = self._resolve_target_transform_attr()
-        return [transform_attr] if transform_attr else []
+        target_index = self.get_target_scene_index() if scene_index is None else scene_index
+        attr = self._get_scene_transform_attr_by_index(target_index)
+        if attr:
+            return [attr]
+
+        carb.log_warn(f"[SectionTool] invalid scene index: {target_index}")
+        return []
 
     def _apply_rotation_to_widget_transforms(self, rotation: Gf.Rotation, apply_to_all_scenes: bool = True, scene_index: int = None):
         """대상 widget transform들에 절대 회전을 적용한다."""

@@ -13,12 +13,13 @@ import omni.ui as ui
 import omni.usd
 from omni.kit.widgets.custom import ExpandPanel, SpaceComboBox
 
-from ..common import DEFAULT_SECTION_TOP, SETTING_SECTION_DIRECTION, SectionManager, WidgetAlignment
+from ..common import DEFAULT_SECTION_TOP, MoveTargetMode, SETTING_SECTION_DIRECTION, SectionManager, WidgetAlignment
 from .constant import CONTROL_HEIGHT, PANEL_PADDING_INNER_X, PANEL_SPACING_Y
 
 AXISES = ["X", "Y", "Z"]
 ROTATION_DEGREES_STRING = ["5", "10", "15", "30", "45", "90"]
 ROTATION_DEGREES_NUMBER = ["5", "10", "15", "30", "45", "90"]
+MOVE_TARGETS = ["Selected", "All"]
 
 
 class QuickMovePanel(ExpandPanel):
@@ -30,6 +31,7 @@ class QuickMovePanel(ExpandPanel):
         self._target_buttons_frame = None
         self._aabb_slider_model = ui.SimpleFloatModel(0.5)
         self._aabb_slider_value_label = None
+        self._move_target_combobox = None
         super().__init__("Quick Move", 0, True)
 
     def build_panel(self):
@@ -66,6 +68,13 @@ class QuickMovePanel(ExpandPanel):
                             name="align_z",
                             tooltip="Aligns to X/Y plane",
                             clicked_fn=self._align_z,
+                        )
+                    ui.Spacer(height=6)
+                    with ui.HStack():
+                        ui.Label("Move Target", height=CONTROL_HEIGHT, name="label")
+                        ui.Spacer()
+                        self._move_target_combobox = SpaceComboBox(
+                            0, *MOVE_TARGETS, width=120, height=CONTROL_HEIGHT
                         )
                     with ui.HStack(tooltip="Rotation is applied on the Section Tools Local Axis"):
                         ui.Label("Set Rotation", height=CONTROL_HEIGHT, name="label")
@@ -164,8 +173,10 @@ class QuickMovePanel(ExpandPanel):
         self._rotation_degree = ROTATION_DEGREES_NUMBER[0]
         self._degree_combobox.model.add_item_changed_fn(self._on_degree_changed)
         self._aabb_slider_model.add_value_changed_fn(self._on_aabb_slider_changed)
+        self._move_target_combobox.model.add_item_changed_fn(self._on_move_target_changed)
 
         self._degree_combobox.model.current_index = 4
+        self._sync_move_target_ui_from_manager()
 
     def _align_x(self):
         SectionManager().align_widget(WidgetAlignment.X)
@@ -201,6 +212,16 @@ class QuickMovePanel(ExpandPanel):
     def _on_degree_changed(self, model, item):
         index = model.get_item_value_model().as_int
         self._rotation_degree = ROTATION_DEGREES_NUMBER[index]
+
+    def _on_move_target_changed(self, model, item):
+        index = model.get_item_value_model().as_int
+        is_all = index == 1
+        SectionManager().set_move_target_all(is_all)
+
+    def _sync_move_target_ui_from_manager(self):
+        mode = SectionManager().get_move_target_mode()
+        index = 1 if mode == MoveTargetMode.All else 0
+        self._move_target_combobox.model.current_index = index
 
     def _inverse_cut_direction(self) -> None:
         new_direction = 1 - self._settings.get(SETTING_SECTION_DIRECTION)
