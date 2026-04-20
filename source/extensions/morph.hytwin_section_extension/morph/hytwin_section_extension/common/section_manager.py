@@ -138,9 +138,6 @@ class SectionManager:
         self._settings.set_bool(SETTING_SECTION_ENABLED, True)
         self._settings.set_bool(SETTING_SECTION_MANIPULATOR, True)
 
-        if self.section_count == 0:
-            self.add_section()
-
         from ..tool import SectionTool
 
         SectionTool().set_visibility(True, ext_id)
@@ -238,12 +235,6 @@ class SectionManager:
         selected_attr = self._get_selected_section_transform_attr()
         if selected_attr:
             return selected_attr
-
-        if self._section_transform_attr:
-            return self._section_transform_attr
-
-        if self.get_section_widget_prim(create_if_not_exist=True):
-            return self._section_transform_attr
         return None
 
     def set_widget_position_from_prim_path(self, prim_path: str) -> bool:
@@ -408,14 +399,12 @@ class SectionManager:
     def get_transform_attr(self, viewport_key: str = None):
         """현재 상태에서 필요한 값을 조회해 반환한다."""
         with self._get_section_edit_context():
-            if viewport_key:
-                widget_prim = self.get_section_widget_prim(create_if_not_exist=True, viewport_key=viewport_key)
-                if not widget_prim:
-                    return None
-                return widget_prim.GetAttribute(ATTR_SECTION_TRANSFORM)
-            if self._section_transform_attr:
-                return self._section_transform_attr
-            return None
+            if not viewport_key:
+                return None
+            widget_prim = self.get_section_widget_prim(create_if_not_exist=True, viewport_key=viewport_key)
+            if not widget_prim:
+                return None
+            return widget_prim.GetAttribute(ATTR_SECTION_TRANSFORM)
 
     def _load_section_variants(self):
         """해당 함수의 핵심 로직을 수행한다."""
@@ -518,21 +507,23 @@ class SectionManager:
     def _get_section_widget_path(self, section_tool_path: str, viewport_key: str = None) -> str:
         """현재 상태에서 필요한 값을 조회해 반환한다."""
         if not viewport_key:
-            return section_tool_path + SECTION_PRIM_PATH
+            return None
         safe_key = self._sanitize_viewport_key(viewport_key)
         return f"{section_tool_path}/{safe_key}{SECTION_PRIM_PATH}"
 
     def get_section_widget_prim(self, create_if_not_exist=False, viewport_key: str = None):
         """현재 상태에서 필요한 값을 조회해 반환한다."""
         with self._get_section_edit_context():
-            if self._widget_prim and not viewport_key:
-                return self._widget_prim
+            if not viewport_key:
+                return None
 
             if not self._stage:
                 self._stage = omni.usd.get_context().get_stage()
 
             section_tool_path = self._get_section_tool_path()
             section_prim_path = self._get_section_widget_path(section_tool_path, viewport_key)
+            if not section_prim_path:
+                return None
 
             widget_prim = self._stage.GetPrimAtPath(section_prim_path)
 
@@ -558,10 +549,6 @@ class SectionManager:
 
             self._tool_prim = self._stage.GetPrimAtPath(section_tool_path)
             self._tool_prim.SetMetadata(HIDE_IN_STAGE_WINDOW, True)
-
-            if not viewport_key:
-                self._widget_prim = widget_prim
-                self._section_transform_attr = section_transform_attr
 
             return widget_prim
 

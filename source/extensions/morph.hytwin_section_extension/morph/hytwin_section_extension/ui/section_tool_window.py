@@ -163,11 +163,8 @@ class SectionToolWindow(ui.Window):
     def _on_section_enabled(self):
         """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self._section_enabled = self._settings.get_as_bool(SETTING_SECTION_ENABLED)
-        if SectionManager().section_count == 0:
-            SectionManager().add_section()
-            self._on_show_gizmo()
-
         self._on_section_visibility_changed()
+        self._on_show_gizmo()
 
     def _on_section_visibility_changed(self):
         """이벤트가 발생했을 때 후속 처리를 수행한다."""
