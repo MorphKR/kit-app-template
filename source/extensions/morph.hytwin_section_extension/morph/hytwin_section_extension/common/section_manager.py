@@ -199,6 +199,9 @@ class SectionManager:
     def set_widget_position(self, position):
         """입력값을 내부 상태와 설정에 반영한다."""
         with self._get_section_edit_context():
+            position = self._round_vec3(position)
+            if position is None:
+                return
             transform_attr = self._resolve_target_transform_attr()
             if transform_attr:
                 transform = transform_attr.Get()
@@ -273,7 +276,7 @@ class SectionManager:
         try:
             bound = self._bboxcache.ComputeWorldBound(prim).ComputeAlignedRange()
             if bound and not bound.IsEmpty():
-                return bound.GetMidpoint()
+                return self._round_vec3(bound.GetMidpoint())
         except Exception:  # pragma: no cover
             pass
 
@@ -281,8 +284,17 @@ class SectionManager:
         try:
             xform = UsdGeom.Xformable(prim)
             matrix = xform.ComputeLocalToWorldTransform(Usd.TimeCode.Default())
-            return matrix.ExtractTranslation()
+            return self._round_vec3(matrix.ExtractTranslation())
         except Exception:  # pragma: no cover
+            return None
+
+    def _round_vec3(self, value, digits: int = 3):
+        try:
+            x = round(float(value[0]), digits)
+            y = round(float(value[1]), digits)
+            z = round(float(value[2]), digits)
+            return Gf.Vec3d(x, y, z)
+        except Exception:
             return None
 
     def _get_next_available_name(self):
@@ -716,6 +728,9 @@ class SectionManager:
 
             target = Gf.Vec3d(center[0], center[1], center[2])
             target[axis] = target_axis
+            target = self._round_vec3(target)
+            if target is None:
+                continue
 
             model = getattr(scene, "_section_model", None)
             if not model:
