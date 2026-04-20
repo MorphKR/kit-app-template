@@ -641,9 +641,12 @@ class SectionManager:
             if not model:
                 continue
             try:
-                transform = Gf.Matrix4d()
+                item = model.get_item("transform")
+                transform = model.get_as_floats(item)
+                if transform is None:
+                    transform = Gf.Matrix4d()
                 transform.SetTranslateOnly(center)
-                model.set_floats(model.get_item("transform"), transform)
+                model.set_floats(item, transform)
                 moved_any = True
             except Exception as exc:  # pragma: no cover
                 carb.log_warn(
@@ -719,9 +722,12 @@ class SectionManager:
                 continue
 
             try:
-                transform = Gf.Matrix4d()
+                item = model.get_item("transform")
+                transform = model.get_as_floats(item)
+                if transform is None:
+                    transform = Gf.Matrix4d()
                 transform.SetTranslateOnly(target)
-                model.set_floats(model.get_item("transform"), transform)
+                model.set_floats(item, transform)
                 moved_any = True
                 last_center = target
             except Exception as exc:  # pragma: no cover

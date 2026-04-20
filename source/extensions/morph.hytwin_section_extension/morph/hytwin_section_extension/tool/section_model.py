@@ -109,6 +109,12 @@ class SectionModel(sc.AbstractManipulatorModel):
             if not value:
                 return
 
+            section_transform_attr = SectionManager().get_transform_attr(viewport_key=self._viewport_key)
+            if section_transform_attr:
+                current_value = section_transform_attr.Get()
+                if current_value != value:
+                    section_transform_attr.Set(value)
+
             self._transform.value = value
             self.update_section_plane()
             self._item_changed(self._transform)
