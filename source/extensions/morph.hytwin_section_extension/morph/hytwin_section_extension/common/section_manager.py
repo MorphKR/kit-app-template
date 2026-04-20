@@ -63,6 +63,8 @@ class SectionManager:
         self._settings = carb.settings.get_settings()
         purposes = [UsdGeom.Tokens.default_]
         self._bboxcache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), purposes)
+        self._align_axis = WidgetAlignment.Z
+        self._center_aligned_prim_path = None
 
         self.refresh()
 
@@ -100,6 +102,7 @@ class SectionManager:
         self._section_variant_set = None
         self._widget_prim = None
         self._section_transform_attr = None
+        self._center_aligned_prim_path = None
 
     def refresh(self):
         """현재 상태를 다시 계산하고 갱신한다."""
@@ -181,6 +184,8 @@ class SectionManager:
 
     def align_widget(self, align, apply_to_all_scenes: bool = True, scene_index: int = None):
         """선택한 축 기준으로 섹션을 정렬한다."""
+        if align in (WidgetAlignment.X, WidgetAlignment.Y, WidgetAlignment.Z):
+            self._align_axis = align
         if align == WidgetAlignment.X:
             rotation = Gf.Rotation(Gf.Vec3d(0, 1, 0), 90) * Gf.Rotation(Gf.Vec3d(1, 0, 0), 90)
         elif align == WidgetAlignment.Y:
@@ -267,7 +272,62 @@ class SectionManager:
             carb.log_warn(f"[SectionTool] set_widget_position_from_prim_path: failed to compute center: {prim_path}")
             return False
         self.set_widget_position(center)
+        self._center_aligned_prim_path = prim_path
         carb.log_info(f"[SectionTool] section moved to prim center: {prim_path} -> {center}")
+        return True
+
+    def set_align_axis(self, align: str) -> None:
+        if align in (WidgetAlignment.X, WidgetAlignment.Y, WidgetAlignment.Z):
+            self._align_axis = align
+
+    def get_align_axis(self) -> str:
+        return self._align_axis or WidgetAlignment.Z
+
+    def move_widget_in_center_aligned_prim_aabb(self, value: float) -> bool:
+        t = float(value)
+
+        if t < 0.0:
+            t = 0.0
+        elif t > 1.0:
+            t = 1.0
+
+        #선택된 prim이 없으면 마지막으로 center-aligned 했던 prim을 기준으로 이동한다.
+        prim_path = self._center_aligned_prim_path
+        prim = self._stage.GetPrimAtPath(prim_path)
+
+        try:
+            bound = self._bboxcache.ComputeWorldBound(prim).ComputeAlignedRange()
+        except Exception:
+            bound = None
+        if not bound or bound.IsEmpty():
+            carb.log_warn(f"[SectionTool] move_widget_in_center_aligned_prim_aabb: empty bound: {prim_path}")
+            return False
+
+        axis = self.get_align_axis()
+        axis_index_map = {WidgetAlignment.X: 0, WidgetAlignment.Y: 1, WidgetAlignment.Z: 2}
+        axis_index = axis_index_map.get(axis, 2)
+        axis_min = float(bound.GetMin()[axis_index])
+        axis_max = float(bound.GetMax()[axis_index])
+        target_axis = axis_min + (axis_max - axis_min) * t
+
+        with self._get_section_edit_context():
+            transform_attr = self._resolve_target_transform_attr()
+            if not transform_attr:
+                carb.log_warn("[SectionTool] move_widget_in_center_aligned_prim_aabb: section transform attribute is missing")
+                return False
+
+            transform = transform_attr.Get()
+            current_pos = transform.ExtractTranslation()
+            target_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])
+            target_pos[axis_index] = target_axis
+            target_pos = self._round_vec3(target_pos)
+            if target_pos is None:
+                carb.log_warn("[SectionTool] move_widget_in_center_aligned_prim_aabb: failed to round target position")
+                return False
+
+            transform.SetTranslateOnly(target_pos)
+            transform_attr.Set(transform)
+
         return True
 
     def _get_prim_world_center(self, prim):

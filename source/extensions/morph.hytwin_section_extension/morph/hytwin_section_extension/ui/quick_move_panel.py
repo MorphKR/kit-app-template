@@ -25,10 +25,12 @@ class QuickMovePanel(ExpandPanel):
     """패널 UI 구성과 사용자 입력 처리를 담당한다."""
     def __init__(self):
         """인스턴스의 초기 상태를 구성한다."""
-        super().__init__("Quick Move", 0, True)
 
         self._settings = carb.settings.get_settings()
         self._target_buttons_frame = None
+        self._aabb_slider_model = ui.SimpleFloatModel(0.5)
+        self._aabb_slider_value_label = None
+        super().__init__("Quick Move", 0, True)
 
     def build_panel(self):
         """UI 위젯 트리를 구성한다."""
@@ -125,6 +127,23 @@ class QuickMovePanel(ExpandPanel):
                 )
                 ui.Spacer(width=PANEL_PADDING_INNER_X)
 
+            ui.Spacer(height=8)
+            with ui.HStack(height=CONTROL_HEIGHT):
+                ui.Spacer(width=PANEL_PADDING_INNER_X - 10)
+                ui.Label("AABB Range", width=70, name="label")
+                ui.FloatSlider(model=self._aabb_slider_model, min=0.0, max=1.0, width=180, height=CONTROL_HEIGHT)
+                ui.Spacer(width=8)
+                self._aabb_slider_value_label = ui.Label("0.500", width=48, name="label")
+                ui.Spacer(width=8)
+                ui.Button(
+                    "Apply",
+                    width=72,
+                    height=CONTROL_HEIGHT,
+                    name="control",
+                    clicked_fn=self._apply_aabb_slider,
+                )
+                ui.Spacer(width=PANEL_PADDING_INNER_X)
+
             ui.Spacer(height=12)
             with ui.HStack(height=CONTROL_HEIGHT):
                 ui.Spacer(width=PANEL_PADDING_INNER_X - 10)
@@ -144,6 +163,7 @@ class QuickMovePanel(ExpandPanel):
         self._axis_combobox.model.add_item_changed_fn(self._on_axis_changed)
         self._rotation_degree = ROTATION_DEGREES_NUMBER[0]
         self._degree_combobox.model.add_item_changed_fn(self._on_degree_changed)
+        self._aabb_slider_model.add_value_changed_fn(self._on_aabb_slider_changed)
 
         self._degree_combobox.model.current_index = 4
 
@@ -197,6 +217,16 @@ class QuickMovePanel(ExpandPanel):
             carb.log_info(f"[SectionTool] Move Section To Prim Path succeeded: {prim_path}")
         else:
             carb.log_warn(f"[SectionTool] Prim not found or invalid: {prim_path}")
+
+    def _on_aabb_slider_changed(self, model) -> None:
+        value = model.get_value_as_float()
+        if self._aabb_slider_value_label:
+            self._aabb_slider_value_label.text = f"{value:.3f}"
+
+    def _apply_aabb_slider(self) -> None:
+        value = self._aabb_slider_model.get_value_as_float()
+        if not SectionManager().move_widget_in_center_aligned_prim_aabb(value):
+            carb.log_warn(f"[SectionTool] AABB slider apply failed: {value:.3f}")
 
     def _get_section_tool_object_paths(self):
         stage = omni.usd.get_context().get_stage()
