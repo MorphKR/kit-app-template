@@ -32,13 +32,16 @@ class SectionTool:
 
     def destroy(self):
         self._stop_viewport_watch()
-        for scene in self._scenes.values():
-            scene.destroy()
-        self._scenes.clear()
+        self._destroy_all_scenes()
 
     def reset(self):
         for scene in self._scenes.values():
             scene.refresh()
+
+    def _destroy_all_scenes(self):
+        for scene in self._scenes.values():
+            scene.destroy()
+        self._scenes.clear()
 
     @property
     def visible(self):  # pragma: no cover
@@ -182,12 +185,13 @@ class SectionTool:
         self._visible = bool(value)
         self._ext_id = ext_id
         if value:
+            # 비활성화에서 재활성화될 때 현재 viewport 상태 기준으로 sceneview를 다시 생성한다.
             self._sync_viewport_scenes()
             self._start_viewport_watch()
         else:
             self._stop_viewport_watch()
-            for scene in self._scenes.values():
-                scene.show(False)
+            # 입력 충돌 방지를 위해 숨김(show=False) 대신 sceneview를 완전히 제거한다.
+            self._destroy_all_scenes()
 
         self.show_section_gizmo(value)
 
