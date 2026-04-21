@@ -88,6 +88,7 @@ class SectionManipulator(sc.Manipulator):
 
         self.__selection_state: SelectionState = SelectionState(kwargs.get("viewport_window", None))
         self._viewport_key = kwargs.get("viewport_key", None)
+        self._enable_gesture = bool(kwargs.get("enable_gesture", False))
         self._selection = omni.usd.get_context().get_selection()
         self._section = None
 
@@ -118,17 +119,21 @@ class SectionManipulator(sc.Manipulator):
         self._section = sc.Transform()
         with self._section:
             with sc.Transform(scale_to=sc.Space.SCREEN):
+                body_gestures = []
+                if self._enable_gesture:
+                    body_gestures = [
+                        sc.ClickGesture(name="SectionClick", on_ended_fn=self._on_click_section),
+                        sc.HoverGesture(
+                            name="SectionHover", on_began_fn=self._on_hover_start, on_ended_fn=self._on_hover_end
+                        ),
+                    ]
+
                 self._body = sc.Rectangle(
                     height=SECTION_HEIGHT,
                     width=SECTION_WIDTH,
                     color=0x33FFFFFF,
                     axis=2,
-                    gestures=[
-                        sc.ClickGesture(name="SectionClick", on_ended_fn=self._on_click_section),
-                        sc.HoverGesture(
-                            name="SectionHover", on_began_fn=self._on_hover_start, on_ended_fn=self._on_hover_end
-                        ),
-                    ],
+                    gestures=body_gestures,
                 )
 
                 points = [

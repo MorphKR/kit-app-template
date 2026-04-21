@@ -86,14 +86,8 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
             self.menu_refresh()
 
 
-            settings = carb.settings.get_settings()
-            TOOL_NAME = WINDOW_NAME
-            if visible:
-
-                if settings.get_as_string(CURRENT_TOOL_PATH) == "navigation":
-                    settings.set_string(CURRENT_TOOL_PATH, TOOL_NAME)
-            elif settings.get_as_string(CURRENT_TOOL_PATH) == TOOL_NAME:
-                settings.set_string(CURRENT_TOOL_PATH, "navigation")
+            # Keep current viewport tool unchanged so camera manipulator can work
+            # while section window is visible.
 
     def show_window(self, menu, value):
 
