@@ -45,7 +45,7 @@ class SectionModel(sc.AbstractManipulatorModel):
         self._viewport_window = viewport_window
         self._transform = SectionModel.TransformItem()
 
-        section_transform_attr = SectionManager().get_transform_attr(viewport_key=self._viewport_key)
+        section_transform_attr = SectionManager.get_instance().get_transform_attr(viewport_key=self._viewport_key)
         if section_transform_attr:
             self.set_floats(self._transform, section_transform_attr.Get())
 
@@ -109,7 +109,7 @@ class SectionModel(sc.AbstractManipulatorModel):
             if not value:
                 return
 
-            section_transform_attr = SectionManager().get_transform_attr(viewport_key=self._viewport_key)
+            section_transform_attr = SectionManager.get_instance().get_transform_attr(viewport_key=self._viewport_key)
             if section_transform_attr:
                 current_value = section_transform_attr.Get()
                 if current_value != value:
@@ -122,7 +122,7 @@ class SectionModel(sc.AbstractManipulatorModel):
     def _on_usd_changed(self, notice, stage):
         """USD 속성 변경 시 모델 값을 동기화한다."""
         with self._get_section_edit_context():
-            section_transform_attr = SectionManager().get_transform_attr(viewport_key=self._viewport_key)
+            section_transform_attr = SectionManager.get_instance().get_transform_attr(viewport_key=self._viewport_key)
             if not section_transform_attr:
                 return
             attr_path = section_transform_attr.GetPath()

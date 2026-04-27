@@ -179,13 +179,13 @@ class QuickMovePanel(ExpandPanel):
         self._sync_move_target_ui_from_manager()
 
     def _align_x(self):
-        SectionManager().align_widget(WidgetAlignment.X)
+        SectionManager.get_instance().align_widget(WidgetAlignment.X)
 
     def _align_y(self):
-        SectionManager().align_widget(WidgetAlignment.Y)
+        SectionManager.get_instance().align_widget(WidgetAlignment.Y)
 
     def _align_z(self):
-        SectionManager().align_widget(WidgetAlignment.Z)
+        SectionManager.get_instance().align_widget(WidgetAlignment.Z)
 
     def _on_rotate_clockwise(self):
         self._rotate(True)
@@ -203,7 +203,7 @@ class QuickMovePanel(ExpandPanel):
         angle = float(self._rotation_degree)
         if clockwise:
             angle *= -1.0
-        SectionManager().rotate_widget(align, angle)
+        SectionManager.get_instance().rotate_widget(align, angle)
 
     def _on_axis_changed(self, model, item):
         index = model.get_item_value_model().as_int
@@ -216,10 +216,10 @@ class QuickMovePanel(ExpandPanel):
     def _on_move_target_changed(self, model, item):
         index = model.get_item_value_model().as_int
         is_all = index == 1
-        SectionManager().set_move_target_all(is_all)
+        SectionManager.get_instance().set_move_target_all(is_all)
 
     def _sync_move_target_ui_from_manager(self):
-        mode = SectionManager().get_move_target_mode()
+        mode = SectionManager.get_instance().get_move_target_mode()
         index = 1 if mode == MoveTargetMode.All else 0
         self._move_target_combobox.model.current_index = index
 
@@ -234,7 +234,7 @@ class QuickMovePanel(ExpandPanel):
             carb.log_warn("[SectionTool] Prim path is empty.")
             return
 
-        if SectionManager().set_widget_position_from_prim_path(prim_path):
+        if SectionManager.get_instance().set_widget_position_from_prim_path(prim_path):
             carb.log_info(f"[SectionTool] Move Section To Prim Path succeeded: {prim_path}")
         else:
             carb.log_warn(f"[SectionTool] Prim not found or invalid: {prim_path}")
@@ -246,7 +246,7 @@ class QuickMovePanel(ExpandPanel):
 
     def _apply_aabb_slider(self) -> None:
         value = self._aabb_slider_model.get_value_as_float()
-        if not SectionManager().move_widget_in_center_aligned_prim_aabb(value):
+        if not SectionManager.get_instance().move_widget_in_center_aligned_prim_aabb(value):
             carb.log_warn(f"[SectionTool] AABB slider apply failed: {value:.3f}")
 
     def _get_section_tool_object_paths(self):

@@ -27,7 +27,6 @@ from .constant import (
     SETTING_SECTION_MANIPULATOR,
     SETTING_SECTION_USE_SESSION_LAYER,
 )
-from .utils import Singleton
 
 ATTR_SECTION_DIRECTION = "primvars:section:direction:top"
 ATTR_SECTION_LIGHT = "primvars:section:light"
@@ -58,9 +57,17 @@ class MoveTargetMode:
     All = "all"
 
 
-@Singleton
 class SectionManager:
     """섹션 상태와 런타임 동작을 중앙에서 관리한다."""
+    _instance = None
+
+    @classmethod
+    def get_instance(cls):
+        """외부 호출용 단일 인스턴스를 반환한다."""
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
     def __init__(self):
         """인스턴스의 초기 상태를 구성한다."""
         self._section_variants = None
@@ -151,9 +158,9 @@ class SectionManager:
 
         from ..tool import SectionTool
 
-        SectionTool().set_visibility(True, ext_id)
+        SectionTool.get_instance().set_visibility(True, ext_id)
         if show_gizmo:
-            SectionTool().show_section_gizmo(True)
+            SectionTool.get_instance().show_section_gizmo(True)
         return True
 
     def run_section_only(self, ext_id: str = None) -> bool:
@@ -169,8 +176,8 @@ class SectionManager:
 
         from ..tool import SectionTool
 
-        SectionTool().show_section_gizmo(False)
-        SectionTool().set_visibility(False, ext_id)
+        SectionTool.get_instance().show_section_gizmo(False)
+        SectionTool.get_instance().set_visibility(False, ext_id)
         return True
 
     def add_section(self):
@@ -734,7 +741,7 @@ class SectionManager:
         from ..tool import SectionTool
 
         moved_any = False
-        for scene in SectionTool().scenes:
+        for scene in SectionTool.get_instance().scenes:
             viewport_key = getattr(scene, "_viewport_key", None)
 
             # TODO(사용자 지정): scene/viewport 기준으로 대상 prim 경로를 선택하세요.
@@ -808,7 +815,7 @@ class SectionManager:
 
         from ..tool import SectionTool
 
-        scenes = SectionTool().scenes
+        scenes = SectionTool.get_scenes()
         if not scenes:
             carb.log_warn("[SectionTool] move_scenes_in_connected_prim_range: no scenes")
             return False
@@ -878,7 +885,7 @@ class SectionManager:
 
         attrs = []
         seen = set()
-        for scene in SectionTool().scenes:
+        for scene in SectionTool.get_scenes():
             viewport_key = getattr(scene, "_viewport_key", None)
             attr = self.get_transform_attr(viewport_key=viewport_key)
             if not attr:
@@ -939,7 +946,7 @@ class SectionManager:
 
         from ..tool import SectionTool
 
-        scenes = SectionTool().scenes
+        scenes = SectionTool.get_scenes()
         if scene_index >= len(scenes):
             return None
 

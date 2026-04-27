@@ -1,5 +1,5 @@
 from .constant import *
-from .section_manager import CutDirection, SectionManager, WidgetAlignment
+from .section_manager import CutDirection, MoveTargetMode, SectionManager, WidgetAlignment
 from .utils import *
 
 # Keep optional imports resilient so SectionManager import works even if
@@ -11,6 +11,7 @@ except Exception:  # pragma: no cover
 
 __all__ = [
     "CutDirection",
+    "MoveTargetMode",
     "SectionManager",
     "WidgetAlignment",
     "SelectionState",

@@ -12,13 +12,25 @@ import omni.kit.app
 import omni.kit.viewport.utility as vp_utils
 import omni.ui as ui
 
-from ..common import SectionManager, Singleton
+from ..common import SectionManager
 from .section_scene import SectionScene
 
 
-@Singleton
 class SectionTool:
     """뷰포트별 섹션 씬과 표시 라이프사이클을 관리한다."""
+    _instance = None
+
+    @classmethod
+    def get_instance(cls):
+        """외부 호출용 단일 인스턴스를 반환한다."""
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def get_scenes(cls):
+        """외부 호출용으로 현재 활성 scene 목록을 반환한다."""
+        return cls.get_instance().scenes
 
     def __init__(self):
         """섹션 도구 상태를 초기화한다."""
@@ -150,7 +162,7 @@ class SectionTool:
             live_keys.add(key)
             if key not in self._scenes:
                 # viewport_key별로 section prim/scene를 분리 관리한다.
-                SectionManager().get_section_widget_prim(create_if_not_exist=True, viewport_key=key)
+                SectionManager.get_instance().get_section_widget_prim(create_if_not_exist=True, viewport_key=key)
                 self._scenes[key] = SectionScene(self._ext_id, viewport_window=viewport_window, viewport_key=key)
                 carb.log_info(f"[SectionTool] Section scene created for viewport: {key}")
             self._scenes[key].show(True)
@@ -180,7 +192,12 @@ class SectionTool:
         if self._visible:
             self._sync_viewport_scenes()
 
-    def set_visibility(self, value: bool, ext_id: str) -> None:
+    @classmethod
+    def set_visibility(cls, value: bool, ext_id: str) -> None:
+        """섹션 도구 표시 상태를 전환한다."""
+        cls.get_instance()._set_visibility(value, ext_id)
+
+    def _set_visibility(self, value: bool, ext_id: str) -> None:
         """섹션 도구 표시 상태를 전환한다."""
         self._visible = bool(value)
         self._ext_id = ext_id
@@ -193,9 +210,14 @@ class SectionTool:
             # 입력 충돌 방지를 위해 숨김(show=False) 대신 sceneview를 완전히 제거한다.
             self._destroy_all_scenes()
 
-        self.show_section_gizmo(value)
+        self._show_section_gizmo(value)
 
-    def show_section_gizmo(self, value: bool):
+    @classmethod
+    def show_section_gizmo(cls, value: bool):
+        """모든 활성 섹션 씬의 기즈모 표시 상태를 전환한다."""
+        cls.get_instance()._show_section_gizmo(value)
+
+    def _show_section_gizmo(self, value: bool):
         """모든 활성 섹션 씬의 기즈모 표시 상태를 전환한다."""
         for scene in self._scenes.values():
             scene.show_section_gizmo(value)

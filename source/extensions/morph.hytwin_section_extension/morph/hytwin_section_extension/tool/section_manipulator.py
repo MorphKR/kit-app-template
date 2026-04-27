@@ -78,7 +78,7 @@ class SectionManipulator(sc.Manipulator):
                 align = WidgetAlignment.Z
 
             degree = angle * 180 / PI
-            SectionManager().rotate_widget(align, degree)
+            SectionManager.get_instance().rotate_widget(align, degree)
 
     def __init__(self, **kwargs):
         """매니퓰레이터 상태와 제스처를 초기화한다."""
@@ -215,7 +215,7 @@ class SectionManipulator(sc.Manipulator):
 
     def show_gizmo(self, value):
         """섹션 위젯 prim의 선택 상태를 토글한다."""
-        widget_prim = SectionManager().get_section_widget_prim(viewport_key=self._viewport_key)
+        widget_prim = SectionManager.get_instance().get_section_widget_prim(viewport_key=self._viewport_key)
         if value and widget_prim:
             widget_prim_path = widget_prim.GetPath().pathString
             self._selection.set_selected_prim_paths([widget_prim_path], True)

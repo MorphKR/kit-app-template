@@ -113,25 +113,25 @@ class TestSection(OmniUiTest):
         await self.finalize_test("section_2.png")
 
         # Rotating Widget
-        SectionManager().rotate_widget("x", 90)
+        SectionManager.get_instance().rotate_widget("x", 90)
         await ui_test.human_delay(2)
         await self.finalize_test("section_3.png")
-        SectionManager().rotate_widget("y", 90)
+        SectionManager.get_instance().rotate_widget("y", 90)
         await ui_test.human_delay(2)
         await self.finalize_test("section_3b.png")
-        SectionManager().rotate_widget("z", 90)
+        SectionManager.get_instance().rotate_widget("z", 90)
         await ui_test.human_delay(2)
         await self.finalize_test("section_3c.png")
 
         # Moving the section to a new position
-        SectionManager().set_widget_position([0, 100, 0])
+        SectionManager.get_instance().set_widget_position([0, 100, 0])
 
         # Checking math on computing center of prim bounds
         self.create_test_object("/cube_a", position=(100, 0, 0))
         await ui_test.human_delay(2)
         self.create_test_object("/cube_b", position=(-100, 0, 0))
         await ui_test.human_delay(2)
-        prim_midpoint = SectionManager().get_center_of_prims(["/cube_a", "/cube_b"])
+        prim_midpoint = SectionManager.get_instance().get_center_of_prims(["/cube_a", "/cube_b"])
         self.assertTrue(prim_midpoint == [0, 0, 0])
 
     async def test_hide_when_window_close(self):
@@ -246,7 +246,7 @@ class TestSection(OmniUiTest):
         """해당 기능 경로를 검증하는 테스트 시나리오다."""
         from morph.hytwin_section_extension.common import SectionManager
 
-        manager = SectionManager()
+        manager = SectionManager.get_instance()
 
         self.assertTrue(len(manager.section_names) == 1)
 

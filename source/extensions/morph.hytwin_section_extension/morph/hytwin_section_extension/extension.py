@@ -70,7 +70,7 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
             self._window.destroy()
             self._window = None
 
-        SectionTool().destroy()
+        SectionTool.get_instance().destroy()
 
         settings = carb.settings.get_settings()
         settings.unsubscribe_to_change_events(self._viewport_current_tool_changed_sub)

@@ -69,7 +69,7 @@ class SectionToolWindow(ui.Window):
         )
         self._always_display_switch: Optional[Switch] = None
 
-        SectionManager().refresh()
+        SectionManager.get_instance().refresh()
         self._start_dirty_listen()
 
         ui_style = get_ui_style()
@@ -94,13 +94,13 @@ class SectionToolWindow(ui.Window):
                     # OMFP-752: Disable section when delete from stage panel
                     self.set_active(False)
                     self.show(False)
-                    SectionManager().clear()
-                    SectionTool().set_visibility(False, self._ext_id)
+                    SectionManager.get_instance().clear()
+                    SectionTool.set_visibility(False, self._ext_id)
 
     def destroy(self):
         """사용한 구독과 리소스를 정리한다."""
         self.visible = False
-        SectionManager().set_added_section_callback(None)
+        SectionManager.get_instance().set_added_section_callback(None)
         self._stop_dirty_listen()
         self._stage_subs.clear()
         self._stage_subs = None
@@ -133,11 +133,11 @@ class SectionToolWindow(ui.Window):
         """이벤트가 발생했을 때 후속 처리를 수행한다."""
         if visible:
             self.frame.rebuild()
-            SectionManager().run_section_runtime(ext_id=self._ext_id, show_gizmo=True)
+            SectionManager.get_instance().run_section_runtime(ext_id=self._ext_id, show_gizmo=True)
         else:
             if not self._always_display_model.as_bool:
                 self.enable_section(False)
-            SectionTool().show_section_gizmo(False)
+            SectionTool.show_section_gizmo(False)
 
     def show(self, visible, *_):
         """표시 상태를 변경하고 연관 상태를 동기화한다."""
@@ -169,7 +169,7 @@ class SectionToolWindow(ui.Window):
     def _on_section_visibility_changed(self):
         """이벤트가 발생했을 때 후속 처리를 수행한다."""
         self._manipulator_visible = self._settings.get_as_bool(SETTING_SECTION_MANIPULATOR)
-        SectionTool().set_visibility(self._manipulator_visible, self._ext_id)
+        SectionTool.set_visibility(self._manipulator_visible, self._ext_id)
 
     def _build_ui(self):
         """UI 위젯 트리를 구성한다."""
@@ -199,15 +199,15 @@ class SectionToolWindow(ui.Window):
 
     def _on_stage_opened(self, _):
         """이벤트가 발생했을 때 후속 처리를 수행한다."""
-        SectionTool().set_visibility(False, self._ext_id)
-        SectionManager().refresh()
-        SectionTool().reset()
+        SectionTool.set_visibility(False, self._ext_id)
+        SectionManager.get_instance().refresh()
+        SectionTool.get_instance().reset()
         self._start_dirty_listen()
 
     def _update_section_cut_direction(self):
         """해당 함수의 핵심 로직을 수행한다."""
         section_direction_top = bool(self._settings.get(SETTING_SECTION_DIRECTION) == DEFAULT_SECTION_TOP)
-        SectionManager().set_direction(section_direction_top)
+        SectionManager.get_instance().set_direction(section_direction_top)
 
     def _start_dirty_listen(self):
         """해당 함수의 핵심 로직을 수행한다."""
@@ -241,5 +241,4 @@ class SectionToolWindow(ui.Window):
         for i in range(3):
             await omni.kit.app.get_app().next_update_async()
 
-        SectionTool().show_section_gizmo(True)
-
+        SectionTool.show_section_gizmo(True)
