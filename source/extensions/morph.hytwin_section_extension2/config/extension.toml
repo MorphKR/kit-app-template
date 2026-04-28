@@ -48,6 +48,7 @@ kit = true
 "omni.kit.window.cursor" = {}
 "omni.kit.viewport.window" = {}
 "omni.kit.menu.utils" = {}
+"omni.kit.manipulator.transform" = {}
 
 # Main python module this extension provides, it will be publicly available as "import morph.hytwin_section_extension2". #TODO
 [[python.module]]

@@ -20,6 +20,7 @@ from ..common import SECTION_COLOR, SectionManager, SelectionState, WidgetAlignm
 PI = 3.1415926
 SECTION_WIDTH = 1200
 SECTION_HEIGHT = 1200
+BACKGROUND_SIZE = 200000
 
 ARROW_P = [
     [3, 3, 0],
@@ -41,7 +42,7 @@ ARROW_VI = [i for i in range(sum(ARROW_VC))]
 
 # TODO: Suspect unused code; remove if so
 def flatten(transform):  # pragma: no cover
-    """Convert array[n][m] to array[n*m]"""
+    """2차원 배열을 1차원 배열로 펼친다."""
     return [item for sublist in transform for item in sublist]
 
 
@@ -86,8 +87,12 @@ class SectionManipulator(sc.Manipulator):
         )
         # self._move_gesture = sc.DragGesture(on_changed_fn=self._on_move)
         self._rotate_gesture = self.ArcRotateTransform()
+        self._on_section_click_cb = kwargs.get("on_section_click")
+        self._on_section_hover_end_cb = kwargs.get("on_section_hover_end")
 
         self.__in_hover = False
+        self._hide_armed_after_hover_end = False
+        self._gizmo_visible = False
 
     def destroy(self):
         self.__selection_state.destroy()
@@ -95,11 +100,11 @@ class SectionManipulator(sc.Manipulator):
 
     def show(self, visible: bool):
         if not visible and self.__in_hover:
-            # OMPE-1444: When hidden, must clear selection state, otherwise viewport context menu may not work
+            # OMPE-1444: 숨길 때 선택 상태를 해제하지 않으면 viewport 컨텍스트 메뉴가 동작하지 않을 수 있음
             self._on_hover_end(None)
 
     def on_build(self):
-        """Called when the model is chenged and rebuilds the whole slider"""
+        """모델 변경 시 섹션 UI를 다시 구성한다."""
         if not self.model:  # pragma: no cover
             return
 
@@ -120,7 +125,7 @@ class SectionManipulator(sc.Manipulator):
                     ],
                 )
 
-                # Lines  TODO: Make a RectangleLine class.
+                # 경계선 구성 (추후 RectangleLine 클래스로 분리 가능)
                 points = [
                     [-SECTION_HEIGHT * 0.5, SECTION_WIDTH * 0.5, 0.0],  # -,+
                     [SECTION_HEIGHT * 0.5, SECTION_WIDTH * 0.5, 0.0],  # +,+
@@ -132,6 +137,18 @@ class SectionManipulator(sc.Manipulator):
                 sc.Line(points[1], points[2], color=SECTION_COLOR, thickness=4)
                 sc.Line(points[2], points[3], color=SECTION_COLOR, thickness=4)
                 sc.Line(points[3], points[0], color=SECTION_COLOR, thickness=4)
+
+        # hover 영역 바깥 클릭을 잡아 gizmo 해제를 처리하기 위한 배경 hit 영역
+        self._background = sc.Transform()
+        with self._background:
+            with sc.Transform(scale_to=sc.Space.SCREEN):
+                sc.Rectangle(
+                    height=BACKGROUND_SIZE,
+                    width=BACKGROUND_SIZE,
+                    color=0x00000000,
+                    axis=2,
+                    gestures=[sc.ClickGesture(name="SectionBackgroundClick", on_ended_fn=self._on_click_background)],
+                )
 
         self._update_transforms()
 
@@ -170,40 +187,62 @@ class SectionManipulator(sc.Manipulator):
         return scTransform
 
     def _on_click_section(self, shape: sc.AbstractShape):
-        # avoid conflict with native selection operator
-        asyncio.ensure_future(self.delay_show())
+        # 섹션 본체 클릭: hover 상태일 때만 gizmo를 켠다.
+        if self._hide_armed_after_hover_end:
+            if callable(self._on_section_hover_end_cb):
+                self._on_section_hover_end_cb()
+            self._gizmo_visible = False
+            self._hide_armed_after_hover_end = False
+            return
+        elif self.__in_hover and callable(self._on_section_click_cb):
+            self._on_section_click_cb()
+            self._gizmo_visible = True
+            asyncio.ensure_future(self.delay_show())
 
     def _on_hover_start(self, _sender):
-        # Toggle the ZStack to block input
+        # hover 진입: 선택 레이어를 잠시 비활성화해 드래그 충돌을 줄인다.
         self.__in_hover = True
+        self._hide_armed_after_hover_end = False
         if self.__selection_state:
             self.__selection_state.reserve()
             self.__selection_state.enabled = False
         get_main_window_cursor().override_cursor_shape(CursorStandardShape.HAND)
 
     def _on_hover_end(self, _sender):
-        # Toggle the ZStack to allow input
+        # hover 종료: 즉시 숨기지 않고 상태만 보존해 회전 드래그 끊김을 방지한다.
         if self.__selection_state:
             self.__selection_state.restore()
+        # hover를 벗어나도 gizmo를 유지해 드래그가 중간에 끊기지 않도록 한다.
+        self._hide_armed_after_hover_end = self._gizmo_visible
         get_main_window_cursor().clear_overridden_cursor_shape()
         self.__in_hover = False
 
+    def _on_click_background(self, _shape: sc.AbstractShape):
+        # 섹션 바깥 클릭 시 gizmo를 해제한다.
+        if self.__in_hover:
+            return
+        if self._gizmo_visible and callable(self._on_section_hover_end_cb):
+            self._on_section_hover_end_cb()
+            self._gizmo_visible = False
+            self._hide_armed_after_hover_end = False
+
     async def delay_show(self):
+        # 클릭 직후 한 프레임 지연 후 선택 상태를 반영
         for i in range(10):
             await omni.kit.app.get_app().next_update_async()
 
         self.show_gizmo(True)
 
     def show_gizmo(self, value):
-        widget_prim = SectionManager().get_section_widget_prim()
+        widget_prim = SectionManager().get_section_widget_prim(create_if_not_exist=True)
         if value and widget_prim:
             widget_prim_path = widget_prim.GetPath().pathString
             self._selection.set_selected_prim_paths([widget_prim_path], True)
         else:
             self._selection.clear_selected_prim_paths()
 
-        #### Use native manipulator
-        #### NOTE: Keeping this here just in case.
+        #### 네이티브 매니퓰레이터 참고 코드
+        #### 필요 시 재활성화할 수 있도록 보관
 
         # if not value:
         #     self._gizmo.clear()

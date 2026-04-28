@@ -25,21 +25,17 @@ PLANE_ATTR = "omni:rtx:scene:sectionPlane:plane"
 
 
 class SectionModel(sc.AbstractManipulatorModel):
-    """
-    User part. The model tracks the section object.
-    """
+    """섹션 오브젝트 transform을 추적하고 section plane을 갱신한다."""
 
     class TransformItem(sc.AbstractManipulatorItem):
-        """
-        The Model Item represents the transform
-        """
+        """모델의 transform 값을 담는 아이템."""
 
         def __init__(self):
             super().__init__()
             self.value = Gf.Matrix4d()
 
     def __init__(self):
-        # this should re-create when open stage
+        # 스테이지 오픈 시 재생성되는 모델 상태
         super().__init__()
 
         self._usd_context = omni.usd.get_context()
@@ -72,10 +68,10 @@ class SectionModel(sc.AbstractManipulatorModel):
 
     def refresh(self):
         with self._get_section_edit_context():
-            self._set_section_plane([0, 0, 0, 0])  # Reset section plane to default
+            self._set_section_plane([0, 0, 0, 0])  # section plane 기본값으로 초기화
 
         self._usd_listener = None
-        self._transform.value = Gf.Matrix4d()  # Reset to identity
+        self._transform.value = Gf.Matrix4d()  # 단위행렬로 초기화
         stage = omni.usd.get_context().get_stage()
         self._usd_listener = Tf.Notice.Register(Usd.Notice.ObjectsChanged, self._on_usd_changed, stage)
 
@@ -103,10 +99,17 @@ class SectionModel(sc.AbstractManipulatorModel):
         with self._get_section_edit_context():
             if not value:  # pragma: no cover
                 return
+            # 모델 값만 바꾸면 Property 패널에 반영되지 않으므로 USD 속성에도 직접 기록한다.
+            section_transform_attr = SectionManager().get_transform_attr()
+            if section_transform_attr:
+                current_value = section_transform_attr.Get()
+                if current_value != value:
+                    section_transform_attr.Set(value)
             # Set directly to the item
             self._transform.value = value
             self.update_section_plane()
             # This makes the manipulator updated
+            # 매니퓰레이터 UI 갱신 이벤트 발생
             self._item_changed(self._transform)
 
     def _on_usd_changed(self, notice, stage):
@@ -123,11 +126,11 @@ class SectionModel(sc.AbstractManipulatorModel):
 
     def _set_section_plane(self, value: list):
         try:
-            # prevent circular update on extension startup
+            # 확장 시작 시 순환 업데이트 방지
             from .section_tool import SectionTool
 
             if not (viewport_scene := SectionTool().scene):
-                carb.log_warn("SectionTool viewport scene is not available to set section plane attribute.")
+                carb.log_warn("SectionTool viewport scene이 없어 section plane 속성을 설정할 수 없습니다.")
                 return
 
             viewport_api = viewport_scene.viewport_api
@@ -139,11 +142,12 @@ class SectionModel(sc.AbstractManipulatorModel):
                     vp_attr.Set(value)
                     return
         except Exception as e:
-            carb.log_warn(f"Failed to set section plane attribute: {e}")
+            carb.log_warn(f"section plane 속성 설정에 실패했습니다: {e}")
 
     def update_section_plane(self):
         with self._get_section_edit_context():
-            # update the render section settings
+            # 렌더 섹션 설정 갱신
+            # 현재 transform 기준으로 section plane 식(ax+by+cz+d=0)을 다시 계산한다.
             if self._settings.get_as_int(SETTING_SECTION_DIRECTION) == SECTION_DIRECTION_TOP:
                 direction = Gf.Vec3d(0, 0, -1)
             else:

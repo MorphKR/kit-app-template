@@ -49,7 +49,8 @@ class SectionTool:
 
         if self._scene:
             self._scene.show(value)
-            self.show_section_gizmo(value)
+            # Gizmo visibility is driven by hover+click interactions in SectionManipulator.
+            self.show_section_gizmo(False)
 
     def show_section_gizmo(self, value: bool):
         if self._scene:
