@@ -11,6 +11,7 @@ __all__ = ["SectionScene"]
 import carb.settings
 import omni.kit.app
 import omni.ui as ui
+from omni.kit.viewport.navigation.core import NAVIGATION_TOOL_OPERATION_ACTIVE
 from omni.kit.viewport.utility import get_active_viewport_window
 from omni.kit.manipulator.transform.manipulator import Axis, TransformManipulator
 from omni.kit.manipulator.transform.simple_transform_model import (
@@ -25,6 +26,7 @@ from morph.hytwin_viewportwidget_extension.viewport_bridge import get_registered
 from pxr import Gf
 
 from ..common import (
+    CURRENT_TOOL_PATH,
     SECTION_COLOR,
     SECTION_DIRECTION_TOP,
     SECTION_HOVER,
@@ -65,6 +67,12 @@ class SectionScene:
         self._transform_op_setting_tp = omni.kit.app.SettingChangeSubscription(
             transform_settings.TRANSFORM_OP_SETTING, lambda *_: self._on_transform_operation_changed()
         )
+        self._navigation_op_setting_tp = omni.kit.app.SettingChangeSubscription(
+            NAVIGATION_TOOL_OPERATION_ACTIVE, lambda *_: self._on_navigation_operation_changed()
+        )
+        self._section_enabled_setting_tp = omni.kit.app.SettingChangeSubscription(
+            SETTING_SECTION_ENABLED, lambda *_: self._on_section_enabled_changed()
+        )
 
         self.__build_window()
 
@@ -89,6 +97,8 @@ class SectionScene:
         self._settings = None
         self._cut_direction_setting_tp = None
         self._transform_op_setting_tp = None
+        self._navigation_op_setting_tp = None
+        self._section_enabled_setting_tp = None
 
         if self._viewport_window and self._scene_view:
             self._viewport_window.viewport_api.remove_scene_view(self._scene_view)
@@ -112,6 +122,8 @@ class SectionScene:
                     on_section_hover_end=self._hide_transform_gizmo,
                 )
                 self._build_transform_manipulator()
+                self._on_section_enabled_changed()
+                self._on_navigation_operation_changed()
 
             self._viewport_window.viewport_api.add_scene_view(self._scene_view)
 
@@ -208,17 +220,52 @@ class SectionScene:
             self._transform_model.set_operation(Operation.TRANSLATE)
 
     def _show_transform_gizmo(self):
+        if not self._settings.get_as_bool(SETTING_SECTION_ENABLED):
+            return
+        self._settings.set_string(CURRENT_TOOL_PATH, "section")
+        self._settings.set(NAVIGATION_TOOL_OPERATION_ACTIVE, "section")
         if self._transform_manipulator:
             self._transform_manipulator.enabled = True
 
     def _hide_transform_gizmo(self):
+        self._settings.set_string(CURRENT_TOOL_PATH, "navigation")
+        self._settings.set(NAVIGATION_TOOL_OPERATION_ACTIVE, "orbit")
         if self._transform_manipulator:
             self._transform_manipulator.enabled = False
 
-    def show(self, visible: bool):
-        self.frame.visible = visible
+    def _on_section_enabled_changed(self):
+        enabled = self._settings.get_as_bool(SETTING_SECTION_ENABLED)
         if self._manipulator:
-            self._manipulator.show(visible)
+            self._manipulator.set_interaction_enabled(enabled)
+            self._manipulator.show(enabled)
+            if not enabled:
+                self._manipulator.show_gizmo(False)
+        if self._transform_manipulator:
+            self._transform_manipulator.enabled = enabled and (self._settings.get(NAVIGATION_TOOL_OPERATION_ACTIVE) == "section")
+
+        if enabled:
+            self._settings.set_string(CURRENT_TOOL_PATH, "section")
+            self._settings.set(NAVIGATION_TOOL_OPERATION_ACTIVE, "section")
+        else:
+            self._settings.set_string(CURRENT_TOOL_PATH, "navigation")
+            self._settings.set(NAVIGATION_TOOL_OPERATION_ACTIVE, "orbit")
+
+    def _on_navigation_operation_changed(self):
+        enabled = self._settings.get_as_bool(SETTING_SECTION_ENABLED)
+        op = self._settings.get(NAVIGATION_TOOL_OPERATION_ACTIVE)
+        if self._transform_manipulator:
+            self._transform_manipulator.enabled = enabled and (op == "section")
+        if self._manipulator and (not enabled or op != "section"):
+            self._manipulator.show_gizmo(False)
+
+    def show(self, visible: bool):
+        enabled = self._settings.get_as_bool(SETTING_SECTION_ENABLED)
+        self.frame.visible = bool(visible and enabled)
+        if self._manipulator:
+            self._manipulator.show(bool(visible and enabled))
+        if not visible or not enabled:
+            self._settings.set_string(CURRENT_TOOL_PATH, "navigation")
+            self._settings.set(NAVIGATION_TOOL_OPERATION_ACTIVE, "orbit")
 
     def show_section_gizmo(self, value):
         if self._manipulator:

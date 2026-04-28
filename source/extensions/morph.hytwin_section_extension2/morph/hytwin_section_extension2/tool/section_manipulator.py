@@ -93,6 +93,7 @@ class SectionManipulator(sc.Manipulator):
         self.__in_hover = False
         self._hide_armed_after_hover_end = False
         self._gizmo_visible = False
+        self._interaction_enabled = True
 
     def destroy(self):
         self.__selection_state.destroy()
@@ -187,7 +188,8 @@ class SectionManipulator(sc.Manipulator):
         return scTransform
 
     def _on_click_section(self, shape: sc.AbstractShape):
-        # 섹션 본체 클릭: hover 상태일 때만 gizmo를 켠다.
+        if not self._interaction_enabled:
+            return
         if self._hide_armed_after_hover_end:
             if callable(self._on_section_hover_end_cb):
                 self._on_section_hover_end_cb()
@@ -200,7 +202,8 @@ class SectionManipulator(sc.Manipulator):
             asyncio.ensure_future(self.delay_show())
 
     def _on_hover_start(self, _sender):
-        # hover 진입: 선택 레이어를 잠시 비활성화해 드래그 충돌을 줄인다.
+        if not self._interaction_enabled:
+            return
         self.__in_hover = True
         self._hide_armed_after_hover_end = False
         if self.__selection_state:
@@ -209,16 +212,17 @@ class SectionManipulator(sc.Manipulator):
         get_main_window_cursor().override_cursor_shape(CursorStandardShape.HAND)
 
     def _on_hover_end(self, _sender):
-        # hover 종료: 즉시 숨기지 않고 상태만 보존해 회전 드래그 끊김을 방지한다.
+        if not self._interaction_enabled:
+            return
         if self.__selection_state:
             self.__selection_state.restore()
-        # hover를 벗어나도 gizmo를 유지해 드래그가 중간에 끊기지 않도록 한다.
         self._hide_armed_after_hover_end = self._gizmo_visible
         get_main_window_cursor().clear_overridden_cursor_shape()
         self.__in_hover = False
 
     def _on_click_background(self, _shape: sc.AbstractShape):
-        # 섹션 바깥 클릭 시 gizmo를 해제한다.
+        if not self._interaction_enabled:
+            return
         if self.__in_hover:
             return
         if self._gizmo_visible and callable(self._on_section_hover_end_cb):
@@ -234,13 +238,31 @@ class SectionManipulator(sc.Manipulator):
         self.show_gizmo(True)
 
     def show_gizmo(self, value):
+        if not self._interaction_enabled:
+            value = False
         widget_prim = SectionManager().get_section_widget_prim(create_if_not_exist=True)
         if value and widget_prim:
             widget_prim_path = widget_prim.GetPath().pathString
             self._selection.set_selected_prim_paths([widget_prim_path], True)
         else:
             self._selection.clear_selected_prim_paths()
+        self._gizmo_visible = bool(value)
 
+
+
+    def set_interaction_enabled(self, enabled: bool):
+        self._interaction_enabled = bool(enabled)
+        if self._section:
+            self._section.visible = self._interaction_enabled
+        if getattr(self, "_background", None):
+            self._background.visible = False
+        if not self._interaction_enabled:
+            self._hide_armed_after_hover_end = False
+            self.__in_hover = False
+            if self.__selection_state:
+                self.__selection_state.restore()
+            get_main_window_cursor().clear_overridden_cursor_shape()
+            self.show_gizmo(False)
         #### 네이티브 매니퓰레이터 참고 코드
         #### 필요 시 재활성화할 수 있도록 보관
 

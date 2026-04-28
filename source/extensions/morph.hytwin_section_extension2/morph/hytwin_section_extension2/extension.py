@@ -87,10 +87,13 @@ class SectionToolExtension(omni.ext.IExt, MenuHelperExtension):
             # OMFP-3552: disable orbit and teleport
             settings = carb.settings.get_settings()
             TOOL_NAME = WINDOW_NAME
+            section_enabled = settings.get_as_bool(SETTING_SECTION_ENABLED)
             if visible:
-                # avoid turning off other tools such as Measure
-                if settings.get_as_string(CURRENT_TOOL_PATH) == "navigation":
+                # section이 실제 활성화된 경우에만 current tool을 section으로 전환
+                if section_enabled and settings.get_as_string(CURRENT_TOOL_PATH) == "navigation":
                     settings.set_string(CURRENT_TOOL_PATH, TOOL_NAME)
+                elif not section_enabled and settings.get_as_string(CURRENT_TOOL_PATH) == TOOL_NAME:
+                    settings.set_string(CURRENT_TOOL_PATH, "navigation")
             elif settings.get_as_string(CURRENT_TOOL_PATH) == TOOL_NAME:
                 settings.set_string(CURRENT_TOOL_PATH, "navigation")
 
