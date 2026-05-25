@@ -27,6 +27,7 @@ repository = "https://github.com/NVIDIA-Omniverse/kit-app-template"  # URL of th
 "omni.kit.quicklayout" = {}
 "omni.kit.viewport.utility" = {}
 "sk.hyview_eqp_messaging_extension" = {}  # Required messaging extension
+"sk.hyview_eqp_viewportwidget_extension" = {}
 
 
 [settings.exts."sk.hyview_eqp_setup_extension"]
