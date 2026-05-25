@@ -2,6 +2,32 @@
     "_comment": "AUTO-GENERATED FILE - DO NOT EDIT MANUALLY",
     "Application": {
         "omni_usd_viewer": {
+            "sk.hyview_eqp": {
+                "omni_usd_viewer": {
+                    "application_name": "sk.hyview_eqp",
+                    "application_display_name": "SK Hyview EQP",
+                    "version": "0.1.0",
+                    "extensions": {
+                        "omni_usd_viewer_messaging": {
+                            "extension_name": "sk.hyview_eqp_messaging_extension",
+                            "extension_display_name": "SK Hyview EQP Messaging Extension",
+                            "version": "0.1.0"
+                        },
+                        "omni_usd_viewer_setup": {
+                            "extension_name": "sk.hyview_eqp_setup_extension",
+                            "extension_display_name": "SK Hyview EQP Setup Extension",
+                            "version": "0.1.0"
+                        }
+                    },
+                    "selected_layers": [
+                        "[omni_default_streaming]: Omniverse Kit App Streaming (Default)"
+                    ],
+                    "applications": {
+                        "omni_default_streaming": {}
+                    },
+                    "add_layers": "Yes"
+                }
+            },
             "my_company.my_usd_viewer": {
                 "omni_usd_viewer": {
                     "application_name": "my_company.my_usd_viewer",
@@ -47,58 +73,7 @@
         }
     },
     "Extension": {
-        "basic_python_ui_extension": {
-            "morph.pick_filter": {
-                "basic_python_ui_extension": {
-                    "extension_name": "morph.pick_filter",
-                    "extension_display_name": "Pick Filter",
-                    "version": "0.1.0"
-                }
-            },
-            "morph.section_control": {
-                "basic_python_ui_extension": {
-                    "extension_name": "morph.section_control",
-                    "extension_display_name": "section control",
-                    "version": "0.1.0"
-                }
-            },
-            "my_company.usd_loader": {
-                "basic_python_ui_extension": {
-                    "extension_name": "my_company.usd_loader",
-                    "extension_display_name": "usd_loader",
-                    "version": "0.1.0"
-                }
-            },
-            "morph.multi_viewport": {
-                "basic_python_ui_extension": {
-                    "extension_name": "morph.multi_viewport",
-                    "extension_display_name": "multi viewport",
-                    "version": "0.1.0"
-                }
-            },
-            "morph.capture_and_movie": {
-                "basic_python_ui_extension": {
-                    "extension_name": "morph.capture_and_movie",
-                    "extension_display_name": "Create Capture And Moive",
-                    "version": "0.1.0"
-                }
-            },
-            "morph.favorites_seach_prim": {
-                "basic_python_ui_extension": {
-                    "extension_name": "morph.favorites_seach_prim",
-                    "extension_display_name": "Favorites Search Prim",
-                    "version": "0.1.0"
-                }
-            }
-        },
         "basic_python_extension": {
-            "morph.force_ko_locale": {
-                "basic_python_extension": {
-                    "extension_name": "morph.force_ko_locale",
-                    "extension_display_name": "Force_KO_Locale",
-                    "version": "0.1.0"
-                }
-            },
             "morph.temp_alarm": {
                 "basic_python_extension": {
                     "extension_name": "morph.temp_alarm",
@@ -117,6 +92,92 @@
                 "basic_python_extension": {
                     "extension_name": "morph.hytwin_convert_basiscurves_extension",
                     "extension_display_name": "Morph HyTwin Convert basiscurves Extension",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.force_ko_locale": {
+                "basic_python_extension": {
+                    "extension_name": "morph.force_ko_locale",
+                    "extension_display_name": "Force_KO_Locale",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.line_temp": {
+                "basic_python_extension": {
+                    "extension_name": "morph.line_temp",
+                    "extension_display_name": "My Python Extension",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.hytwin_section_extension": {
+                "basic_python_extension": {
+                    "extension_name": "morph.hytwin_section_extension",
+                    "extension_display_name": "Morph HyTwin Section",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.hytwin_section_extension2": {
+                "basic_python_extension": {
+                    "extension_name": "morph.hytwin_section_extension2",
+                    "extension_display_name": "Morph HyTwin Section 2",
+                    "version": "0.1.0"
+                }
+            }
+        },
+        "basic_python_ui_extension": {
+            "morph.sample": {
+                "basic_python_ui_extension": {
+                    "extension_name": "morph.sample",
+                    "extension_display_name": "morph Sample",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.hytwin_custom_section": {
+                "basic_python_ui_extension": {
+                    "extension_name": "morph.hytwin_custom_section",
+                    "extension_display_name": "Morph Hytwin Custom Section",
+                    "version": "0.1.0"
+                }
+            },
+            "my_company.usd_loader": {
+                "basic_python_ui_extension": {
+                    "extension_name": "my_company.usd_loader",
+                    "extension_display_name": "usd_loader",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.section_control": {
+                "basic_python_ui_extension": {
+                    "extension_name": "morph.section_control",
+                    "extension_display_name": "section control",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.pick_filter": {
+                "basic_python_ui_extension": {
+                    "extension_name": "morph.pick_filter",
+                    "extension_display_name": "Pick Filter",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.capture_and_movie": {
+                "basic_python_ui_extension": {
+                    "extension_name": "morph.capture_and_movie",
+                    "extension_display_name": "Create Capture And Moive",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.multi_viewport": {
+                "basic_python_ui_extension": {
+                    "extension_name": "morph.multi_viewport",
+                    "extension_display_name": "multi viewport",
+                    "version": "0.1.0"
+                }
+            },
+            "morph.favorites_seach_prim": {
+                "basic_python_ui_extension": {
+                    "extension_name": "morph.favorites_seach_prim",
+                    "extension_display_name": "Favorites Search Prim",
                     "version": "0.1.0"
                 }
             }

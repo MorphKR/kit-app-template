@@ -1,0 +1,15 @@
+
+[package]
+    archivePath = "https://d4i3qtqj3r0z5.cloudfront.net/omni.kit.viewport.navigation.camera_manipulator-107.3.0%2B107.3.zip"
+
+    [package.target]
+
+        [package.target.kit]
+            0 = "107.3"
+
+    [package.publish]
+        kitVersion = "110.1.0+master.268612.dcc84c32.gl"
+        date = 1772700019
+        buildNumber = "110.1.0+mr333.1583.8b11f9d3.gl"
+        repoName = "kit-sample-extensions"
+        signed = 1

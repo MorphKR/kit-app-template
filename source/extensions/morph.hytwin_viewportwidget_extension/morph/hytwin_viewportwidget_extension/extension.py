@@ -5,6 +5,7 @@ import asyncio
 
 import carb.settings
 import omni.ext
+import omni.kit.app
 import omni.ui as ui
 import omni.usd
 from omni.kit.viewport.navigation.core import NAVIGATION_TOOL_OPERATION_ACTIVE
@@ -13,7 +14,7 @@ from omni.kit.widget.viewport import ViewportWidget
 from omni.ui import scene as sc
 from pxr import Gf, UsdGeom
 
-from .viewport_bridge import register_viewport_host, unregister_viewport_host
+from .viewport_bridge import get_registered_viewport_host, register_viewport_host, unregister_viewport_host
 
 
 class MyExtension(omni.ext.IExt):
@@ -50,6 +51,10 @@ class MyExtension(omni.ext.IExt):
         self._navigation_entries = []
         self._viewport_host_keys = []
         self._ui_init_task = None
+        self._settings = carb.settings.get_settings()
+        self._nav_op_sub = omni.kit.app.SettingChangeSubscription(
+            NAVIGATION_TOOL_OPERATION_ACTIVE, lambda *_: self._on_nav_operation_changed()
+        )
 
         self._stage_sub = omni.usd.get_context().get_stage_event_stream().create_subscription_to_pop(
             self._on_stage_event,
@@ -82,6 +87,18 @@ class MyExtension(omni.ext.IExt):
         self._viewport_host_keys = []
 
         self._window = None
+        self._nav_op_sub = None
+        self._settings = None
+
+    def _on_nav_operation_changed(self):
+        if not self._settings:
+            return
+        op = self._settings.get(NAVIGATION_TOOL_OPERATION_ACTIVE)
+        carb.log_warn(f"[ViewportWidget][EVT] nav operation changed -> {op}")
+        # Debug safety: unexpected none 상태로 떨어지면 orbit으로 복구
+        if op == "none":
+            carb.log_warn("[ViewportWidget][EVT] nav operation was none, forcing orbit")
+            self._settings.set(NAVIGATION_TOOL_OPERATION_ACTIVE, "orbit")
 
     def _on_stage_event(self, event):
         if event.type == int(omni.usd.StageEventType.OPENED):
@@ -138,7 +155,7 @@ class MyExtension(omni.ext.IExt):
         """카메라 제스처가 작동하려면 NavigationScene이 활성화되어야 하는데, 이를 위해서는 먼저 NavigationTool의 operation이 orbit으로 설정되어야 한다."""
         carb.settings.get_settings().set(NAVIGATION_TOOL_OPERATION_ACTIVE, "orbit")
 
-        for viewport, overlay_frame in zip(self._viewports, self._overlay_frames):
+        for host_key, viewport, overlay_frame in zip(self._viewport_host_keys, self._viewports, self._overlay_frames):
             viewport_api = getattr(viewport, "viewport_api", None)
             if viewport_api is None:
                 continue
@@ -147,6 +164,9 @@ class MyExtension(omni.ext.IExt):
                 with scene_view.scene:
                     navigation_scene = NavigationScene(self._build_navigation_factory_args(viewport_api))
             viewport_api.add_scene_view(scene_view)
+            host = get_registered_viewport_host(host_key)
+            if host is not None:
+                host.update(scene_view=scene_view, navigation_scene=navigation_scene)
             self._navigation_entries.append(
                 {
                     "viewport_api": viewport_api,
