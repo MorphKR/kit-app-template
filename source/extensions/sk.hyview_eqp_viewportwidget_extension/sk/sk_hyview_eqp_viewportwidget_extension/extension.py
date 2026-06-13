@@ -28,10 +28,10 @@ class ViewportWidgetExtension(omni.ext.IExt):
     _DIVIDER_SIZE = 1
 
     _CAMERA_SPECS = (
-        (1, "/camera_prims/Cam_1", Gf.Vec3d(-500.0, 350.0, 500.0), Gf.Vec3d(-25.0, -45.0, 0.0)),
-        (2, "/camera_prims/Cam_2", Gf.Vec3d(500.0, 350.0, 500.0), Gf.Vec3d(-25.0, 45.0, 0.0)),
-        (3, "/camera_prims/Cam_3", Gf.Vec3d(-500.0, 350.0, -500.0), Gf.Vec3d(-25.0, -135.0, 0.0)),
-        (4, "/camera_prims/Cam_4", Gf.Vec3d(500.0, 350.0, -500.0), Gf.Vec3d(-25.0, 135.0, 0.0)),
+        (0, "/camera_prims/Cam_1", Gf.Vec3d(10000.0, 0.0, 0.0), Gf.Vec3d(0.0, 180.0, 0.0)),
+        (1, "/camera_prims/Cam_2", Gf.Vec3d(20000.0, 0.0, 0.0), Gf.Vec3d(0.0, 180.0, 0.0)),
+        (2, "/camera_prims/Cam_3", Gf.Vec3d(30000.0, 0.0, 0.0), Gf.Vec3d(0.0, 180.0, 0.0)),
+        (3, "/camera_prims/Cam_4", Gf.Vec3d(40000.0, 0.0, 0.0), Gf.Vec3d(0.0, 180.0, 0.0)),
     )
 
     # ------------------------------------------------------------------
@@ -50,7 +50,7 @@ class ViewportWidgetExtension(omni.ext.IExt):
 
     def on_shutdown(self):
         print("[sk.hyview_eqp_viewportwidget_extension] Extension shutdown")
-        ViewportService.unregister_viewport_widget(self)
+        ViewportService.unregister_viewport_widget()
 
         # 비동기 초기화 태스크가 남아 있으면 먼저 정리한다.
         if self._ui_init_task:
@@ -103,7 +103,7 @@ class ViewportWidgetExtension(omni.ext.IExt):
         self._ensure_quad_cameras(root_prim_path)
 
         window, local_viewports, local_overlay_frames, local_host_keys = self._create_quad_window_payload(
-            f"{self._WINDOW_TITLE} - {tab_id}", f"{tab_id}_quad"
+            f"{self._WINDOW_TITLE} - {tab_id}", f"{tab_id}", f"{tab_id}_quad" , root_prim_path
         )
 
         hosts: list[ViewportWidgetHost] = []
@@ -120,7 +120,7 @@ class ViewportWidgetExtension(omni.ext.IExt):
         self._dock_to_main_viewport(window)
         return hosts
 
-    def _create_quad_window_payload(self, window_title: str, host_prefix: str):
+    def _create_quad_window_payload(self, window_title: str, tab_id: str, host_prefix: str, root_prim_path: str):
         window = ui.Window(window_title, width=self._WINDOW_WIDTH, height=self._WINDOW_HEIGHT)
         local_viewports = []
         local_overlay_frames = []
@@ -147,7 +147,10 @@ class ViewportWidgetExtension(omni.ext.IExt):
                         setattr(overlay_frame, attr_name, True)
                     except Exception:
                         pass
-            ViewportService.register_viewport_host(ViewportWidgetHost(key=host_key, viewport_api=viewport.viewport_api, frame=overlay_frame,))
+
+            prim_pos = self._CAMERA_SPECS[int(host_key.split("_")[-1]) - 1][2]
+            prim_pos = Gf.Vec3d(prim_pos[0], prim_pos[1], prim_pos[2] + 500.0)  # 카메라 위치를 약간 뒤로 이동시켜 겹침 방지
+            ViewportService.register_viewport_host(ViewportWidgetHost(key=host_key, viewport_api=viewport.viewport_api, frame=overlay_frame, prim_pos=prim_pos,))
             local_viewports.append(viewport)
             local_overlay_frames.append(overlay_frame)
             local_host_keys.append(host_key)
@@ -156,14 +159,14 @@ class ViewportWidgetExtension(omni.ext.IExt):
         with window.frame:
             with ui.VStack(spacing=0, height=ui.Fraction(1.0)):
                 with ui.HStack(spacing=0, height=ui.Fraction(1.0)):
-                    _create_tile(self._CAMERA_SPECS[0][1], f"{host_prefix}_0")
+                    _create_tile(root_prim_path + self._CAMERA_SPECS[0][1], f"{host_prefix}_0")
                     ui.Rectangle(width=self._DIVIDER_SIZE, style={"background_color": divider_color})
-                    _create_tile(self._CAMERA_SPECS[1][1], f"{host_prefix}_1")
+                    _create_tile(root_prim_path + self._CAMERA_SPECS[1][1], f"{host_prefix}_1")
                 ui.Rectangle(height=self._DIVIDER_SIZE, style={"background_color": divider_color})
                 with ui.HStack(spacing=0, height=ui.Fraction(1.0)):
-                    _create_tile(self._CAMERA_SPECS[2][1], f"{host_prefix}_2")
+                    _create_tile(root_prim_path + self._CAMERA_SPECS[2][1], f"{host_prefix}_2")
                     ui.Rectangle(width=self._DIVIDER_SIZE, style={"background_color": divider_color})
-                    _create_tile(self._CAMERA_SPECS[3][1], f"{host_prefix}_3")
+                    _create_tile(root_prim_path + self._CAMERA_SPECS[3][1], f"{host_prefix}_3")
 
         return window, local_viewports, local_overlay_frames, local_host_keys
 

@@ -3,12 +3,13 @@ from typing import Dict, List, Optional
 class ViewportWidgetHost:
     """다른 확장에서 ViewportWidget 타일을 viewport window처럼 다루기 위한 어댑터."""
 
-    def __init__(self, key: str, viewport_api=None, frame=None, scene_view=None, navigation_scene=None):
+    def __init__(self, key: str, viewport_api=None, frame=None, scene_view=None, prim_pos=None):
         self._key = key
         self.viewport_api = viewport_api
         self._frame = frame
         self.scene_view = scene_view
-        self.visible = True
+        self.prim_pos = prim_pos
+        self.prim = None
 
     @property
     def host_key(self) -> str:
