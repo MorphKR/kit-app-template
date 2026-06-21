@@ -41,6 +41,7 @@ class ViewportWidgetExtension(omni.ext.IExt):
         print("[sk.hyview_eqp_viewportwidget_extension] Extension startup")
         ViewportService.register_viewport_widget(self)
 
+        self._section_ui_active = False
         # 상태/핸들 초기화
         self._viewports = []
         self._overlay_frames = []
@@ -127,26 +128,85 @@ class ViewportWidgetExtension(omni.ext.IExt):
         local_host_keys = []
 
         def _create_tile(camera_path: str, host_key: str):
-            with ui.ZStack(width=ui.Fraction(1.0), height=ui.Fraction(1.0), skip_draw_when_clipped=True):
+            with ui.ZStack(
+                width=ui.Fraction(1.0),
+                height=ui.Fraction(1.0),
+                skip_draw_when_clipped=True,
+            ):
                 viewport = ViewportWidget(
                     resolution="fill_frame",
                     camera_path=camera_path,
                     width=ui.Fraction(1.0),
                     height=ui.Fraction(1.0),
                 )
-                overlay_frame = ui.ScrollingFrame(
+
+                # A layer: orbit / clipping layer
+                with ui.Frame(
                     width=ui.Fraction(1.0),
                     height=ui.Fraction(1.0),
-                    horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
-                    vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
-                    skip_draw_when_clipped=True,
-                    style={"ScrollingFrame": {"background_color": 0x00000000}},
-                )
-                for attr_name in ("content_clipping", "clip_children", "clip_to_bounds"):
-                    try:
-                        setattr(overlay_frame, attr_name, True)
-                    except Exception:
-                        pass
+                    separate_window=True,
+                ):
+                    with ui.HStack(
+                        width=ui.Fraction(1.0),
+                        height=ui.Fraction(1.0),
+                        content_clipping=True,
+                        ):
+
+                        overlay_frame = ui.ScrollingFrame(
+                            width=ui.Fraction(1.0),
+                            height=ui.Fraction(1.0),
+                            horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
+                            vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
+                            skip_draw_when_clipped=True,
+                            style={"ScrollingFrame": {"background_color": 0x00000000}},
+                            mouse_pressed_fn=self._on_a_mouse_pressed,
+                            mouse_released_fn=self._on_a_mouse_released,
+                            mouse_moved_fn=self._on_a_mouse_moved,
+                            mouse_wheel_fn=self._on_a_mouse_wheel,
+                        )
+
+                        overlay_frame.horizontal_clipping = True
+                        overlay_frame.vertical_clipping = True
+
+                        # overlay_frame 자체에는 mouse callback을 달지 말고
+                        # 내부 input frame에 달아둡니다.
+
+                # B layer: 일반 UI layer
+                # A보다 뒤에 생성되어야 함
+                with ui.Frame(
+                    width=ui.Fraction(1.0),
+                    height=ui.Fraction(1.0),
+                    separate_window=True,
+                ):
+                    with ui.HStack(
+                        width=ui.Fraction(1.0),
+                        height=ui.Fraction(1.0),
+                        content_clipping=True,
+):
+                        self.section_panel = ui.Frame(
+                            width=260,
+                            height=140,
+                            style={"background_color": 0xCC202020},
+                            mouse_pressed_fn=self._on_section_ui_mouse_pressed,
+                            mouse_released_fn=self._on_section_ui_mouse_released,
+                        )
+
+                        with self.section_panel:
+                            with ui.VStack(spacing=8):
+                                ui.Label("Section Control")
+
+                                self.section_enable_btn = ui.Button(
+                                    "Enable Section",
+                                    clicked_fn=self._on_section_enable_clicked,
+                                    mouse_pressed_fn=self._on_section_button_pressed,
+                                    mouse_released_fn=self._on_section_button_released,
+                                )
+
+                                self.section_offset_slider = ui.FloatSlider(
+                                    min=-1000.0,
+                                    max=1000.0,
+                                    height=24,
+                                )
 
             prim_pos = self._CAMERA_SPECS[int(host_key.split("_")[-1]) - 1][2]
             prim_pos = Gf.Vec3d(prim_pos[0], prim_pos[1], prim_pos[2] + 500.0)  # 카메라 위치를 약간 뒤로 이동시켜 겹침 방지
@@ -186,3 +246,73 @@ class ViewportWidgetExtension(omni.ext.IExt):
             # main_viewport_window.dock_tab_bar_enabled = False
             # self._window.dock_in(main_viewport_window, ui.DockPosition.SAME, 1.0)
             break
+
+    def _on_a_mouse_pressed(self, x, y, button, modifier):
+        if self._section_ui_active:
+            return
+
+        print("[A] orbit pressed")
+        # orbit 시작 로직
+
+
+    def _on_a_mouse_released(self, x, y, button, modifier):
+        if self._section_ui_active:
+            return
+
+        print("[A] orbit released")
+        # orbit 종료 로직
+
+
+    def _on_a_mouse_moved(self, x, y, button, modifier):
+        if self._section_ui_active:
+            return
+        print("[A] orbit moved")
+        # orbit drag 로직
+
+
+    def _on_a_mouse_wheel(self, x, y, modifier):
+        if self._section_ui_active:
+            return
+
+        print("[A] orbit wheel")
+        # zoom 로직
+
+    def _on_section_ui_mouse_pressed(self, x, y, button, modifier):
+        self._section_ui_active = True
+        print("[B UI] pressed")
+
+
+    def _on_section_ui_mouse_released(self, x, y, button, modifier):
+        print("[B UI] released")
+        self._section_ui_active = False
+
+    def _on_section_ui_mouse_wheel(self, x, y, modifier):
+        self._section_ui_active = True
+        print("[B UI] wheel")
+
+
+    def _on_section_enable_clicked(self):
+        print("Section Enable Clicked")
+
+
+    def _on_section_ui_mouse_pressed(self, x, y, button, modifier):
+        print("[B PANEL] pressed", x, y, button)
+        self._section_ui_active = True
+
+
+    def _on_section_ui_mouse_released(self, x, y, button, modifier):
+        print("[B PANEL] released", x, y, button)
+        self._section_ui_active = False
+
+
+    def _on_section_button_pressed(self, x, y, button, modifier):
+        print("[B BUTTON] pressed", x, y, button)
+        self._section_ui_active = True
+
+
+    def _on_section_button_released(self, x, y, button, modifier):
+        print("[B BUTTON] released", x, y, button)
+
+
+    def _on_section_enable_clicked(self):
+        print("[B BUTTON] clicked")
