@@ -7,7 +7,7 @@ import omni.ext
 import omni.ui as ui
 import omni.usd
 from omni.kit.widget.viewport import ViewportWidget
-from pxr import Gf, UsdGeom
+from pxr import Gf, UsdGeom, sc
 
 from .viewport_service import (
     ViewportService,
@@ -141,16 +141,8 @@ class ViewportWidgetExtension(omni.ext.IExt):
                 )
 
                 # A layer: orbit / clipping layer
-                with ui.Frame(
-                    width=ui.Fraction(1.0),
-                    height=ui.Fraction(1.0),
-                    separate_window=True,
-                ):
-                    with ui.HStack(
-                        width=ui.Fraction(1.0),
-                        height=ui.Fraction(1.0),
-                        content_clipping=True,
-                        ):
+                with ui.Frame(width=ui.Fraction(1.0), height=ui.Fraction(1.0)):
+                    with ui.HStack(width=ui.Fraction(1.0), height=ui.Fraction(1.0), content_clipping=True):
 
                         overlay_frame = ui.ScrollingFrame(
                             width=ui.Fraction(1.0),
@@ -162,36 +154,32 @@ class ViewportWidgetExtension(omni.ext.IExt):
                             mouse_pressed_fn=self._on_a_mouse_pressed,
                             mouse_released_fn=self._on_a_mouse_released,
                             mouse_moved_fn=self._on_a_mouse_moved,
-                            mouse_wheel_fn=self._on_a_mouse_wheel,
                         )
-
-                        overlay_frame.horizontal_clipping = True
-                        overlay_frame.vertical_clipping = True
 
                         # overlay_frame 자체에는 mouse callback을 달지 말고
                         # 내부 input frame에 달아둡니다.
 
+
+                # section layer: section plane / section UI layer
+                # self.section_panel = ui.Frame(width=ui.Fraction(1.0),height=ui.Fraction(1.0),)
+                # with self.section_panel:
+                #     self.section_scene_view = sc.SceneView( width=ui.Fraction(1.0), height=ui.Fraction(1.0), child_windows_input=False,)
+
+
                 # B layer: 일반 UI layer
                 # A보다 뒤에 생성되어야 함
-                with ui.Frame(
-                    width=ui.Fraction(1.0),
-                    height=ui.Fraction(1.0),
-                    separate_window=True,
-                ):
+                self.section_panel = ui.Frame(width=ui.Fraction(1.0),height=ui.Fraction(1.0))
+                with self.section_panel:
                     with ui.HStack(
-                        width=ui.Fraction(1.0),
-                        height=ui.Fraction(1.0),
-                        content_clipping=True,
-):
-                        self.section_panel = ui.Frame(
+                        width=ui.Fraction(1.0), height=ui.Fraction(1.0), content_clipping=True):
+                        with ui.Frame(
                             width=260,
                             height=140,
                             style={"background_color": 0xCC202020},
                             mouse_pressed_fn=self._on_section_ui_mouse_pressed,
                             mouse_released_fn=self._on_section_ui_mouse_released,
-                        )
+                        ):
 
-                        with self.section_panel:
                             with ui.VStack(spacing=8):
                                 ui.Label("Section Control")
 
@@ -210,7 +198,7 @@ class ViewportWidgetExtension(omni.ext.IExt):
 
             prim_pos = self._CAMERA_SPECS[int(host_key.split("_")[-1]) - 1][2]
             prim_pos = Gf.Vec3d(prim_pos[0], prim_pos[1], prim_pos[2] + 500.0)  # 카메라 위치를 약간 뒤로 이동시켜 겹침 방지
-            ViewportService.register_viewport_host(ViewportWidgetHost(key=host_key, viewport_api=viewport.viewport_api, frame=overlay_frame, prim_pos=prim_pos,))
+            ViewportService.register_viewport_host(ViewportWidgetHost(key=host_key, viewport_api=viewport.viewport_api, frame=overlay_frame, ui_frame=self.section_panel, prim_pos=prim_pos))
             local_viewports.append(viewport)
             local_overlay_frames.append(overlay_frame)
             local_host_keys.append(host_key)
