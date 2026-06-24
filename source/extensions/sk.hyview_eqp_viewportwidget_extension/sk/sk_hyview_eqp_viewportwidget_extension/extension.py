@@ -7,7 +7,7 @@ import omni.ext
 import omni.ui as ui
 import omni.usd
 from omni.kit.widget.viewport import ViewportWidget
-from pxr import Gf, UsdGeom, sc
+from pxr import Gf, UsdGeom
 
 from .viewport_service import (
     ViewportService,
@@ -142,8 +142,8 @@ class ViewportWidgetExtension(omni.ext.IExt):
 
                 # A layer: orbit / clipping layer
                 with ui.Frame(width=ui.Fraction(1.0), height=ui.Fraction(1.0)):
-                    with ui.HStack(width=ui.Fraction(1.0), height=ui.Fraction(1.0), content_clipping=True):
-
+                    with ui.ZStack(width=ui.Fraction(1.0), height=ui.Fraction(1.0), content_clipping=True):
+                        self.section_panel = ui.Frame(width=ui.Fraction(1.0),height=ui.Fraction(1.0))
                         overlay_frame = ui.ScrollingFrame(
                             width=ui.Fraction(1.0),
                             height=ui.Fraction(1.0),
@@ -165,36 +165,6 @@ class ViewportWidgetExtension(omni.ext.IExt):
                 # with self.section_panel:
                 #     self.section_scene_view = sc.SceneView( width=ui.Fraction(1.0), height=ui.Fraction(1.0), child_windows_input=False,)
 
-
-                # B layer: 일반 UI layer
-                # A보다 뒤에 생성되어야 함
-                self.section_panel = ui.Frame(width=ui.Fraction(1.0),height=ui.Fraction(1.0))
-                with self.section_panel:
-                    with ui.HStack(
-                        width=ui.Fraction(1.0), height=ui.Fraction(1.0), content_clipping=True):
-                        with ui.Frame(
-                            width=260,
-                            height=140,
-                            style={"background_color": 0xCC202020},
-                            mouse_pressed_fn=self._on_section_ui_mouse_pressed,
-                            mouse_released_fn=self._on_section_ui_mouse_released,
-                        ):
-
-                            with ui.VStack(spacing=8):
-                                ui.Label("Section Control")
-
-                                self.section_enable_btn = ui.Button(
-                                    "Enable Section",
-                                    clicked_fn=self._on_section_enable_clicked,
-                                    mouse_pressed_fn=self._on_section_button_pressed,
-                                    mouse_released_fn=self._on_section_button_released,
-                                )
-
-                                self.section_offset_slider = ui.FloatSlider(
-                                    min=-1000.0,
-                                    max=1000.0,
-                                    height=24,
-                                )
 
             prim_pos = self._CAMERA_SPECS[int(host_key.split("_")[-1]) - 1][2]
             prim_pos = Gf.Vec3d(prim_pos[0], prim_pos[1], prim_pos[2] + 500.0)  # 카메라 위치를 약간 뒤로 이동시켜 겹침 방지
